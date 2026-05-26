@@ -88,7 +88,6 @@ Syncing is optional and uses Git to keep your configuration in sync across machi
 - `hooks/` — Your automation scripts
 - `skills/` — Your custom skills
 - `agents/` — Your custom agents
-- `plugins/` — Your plugins
 - `keybindings.json` — Your keyboard shortcuts
 - `statusline.sh` — Your statusline configuration
 - Profile definitions — So profiles carry over to other machines

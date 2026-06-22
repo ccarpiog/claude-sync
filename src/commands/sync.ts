@@ -179,6 +179,30 @@ export async function handleSyncPull(options: { force?: boolean } = {}): Promise
     );
   }
 
+  // Preview the apply (dry run) to surface local files that the mirror will
+  // delete because they are absent from the synced repo. These include files
+  // removed upstream AND local-only files that were never pushed, so warn before
+  // touching ~/.claude — the earlier confirmation only covered the repo's git
+  // state, not the live config.
+  const preview = await syncToClaudeConfig(claudeSyncDir, claudeConfigDir, true);
+  const deletions = preview.filter((r) => r.action === 'deleted');
+  if (deletions.length > 0) {
+    logger.warn(
+      `${deletions.length} local item(s) will be deleted (absent from the synced repo):`
+    );
+    deletions.forEach((d) => console.log(`  ${chalk.red('-')} ${d.file}`));
+    console.log('');
+    if (!options.force) {
+      const proceed = await confirm('Delete these local files and apply?', false);
+      if (!proceed) {
+        logger.dim(
+          'Applied to the repo but not to your config. Re-run "claude-sync sync pull" to apply.'
+        );
+        return;
+      }
+    }
+  } // End of the local-deletion warning block
+
   // Apply to ~/.claude
   logger.step(2, 2, `Applying to ${formatPath(claudeConfigDir)}...`);
   const results = await syncToClaudeConfig(claudeSyncDir, claudeConfigDir);

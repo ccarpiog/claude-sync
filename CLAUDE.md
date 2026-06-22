@@ -41,8 +41,9 @@ The CLI entry is `src/index.ts` → `src/cli.ts`. `createProgram()` wires up thr
 These back two largely independent features:
 
 1. **Sync** (`src/lib/sync.ts`, `src/commands/sync.ts`) — copies files between `~/.claude/` and the `.claude-sync/` git repo, driven by the `FILE_MAPPINGS` list.
-   - `sync push`: `syncFromClaudeConfig` copies `~/.claude/` → `.claude-sync/`, then commits & pushes (`src/lib/git.ts`).
-   - `sync pull`: **`resetHard` + `cleanUntracked` + `git pull`** (local changes in the repo are discarded, not merged), then `syncToClaudeConfig` copies `.claude-sync/` → `~/.claude/`. This destructive reset is intentional — `--force` skips the confirmation prompt.
+   - `sync push`: `syncFromClaudeConfig` **mirrors** `~/.claude/` → `.claude-sync/` (deletions propagate), then commits & pushes (`src/lib/git.ts`).
+   - `sync pull`: **`resetHard` + `cleanUntracked` + `git pull`** (local changes in the repo are discarded, not merged), then `syncToClaudeConfig` **mirrors** `.claude-sync/` → `~/.claude/`. Mirror means deletions propagate: a file present in `~/.claude/` but absent in the repo (removed upstream, or never pushed) is removed locally. Before applying, pull runs a `dryRun` pass and, if anything would be deleted, prints the list and asks for confirmation. Both the destructive reset and the deletion are intentional — `--force` skips both confirmations (the deletion list is still printed for the audit trail).
+   - **push/pull symmetry:** `syncFromClaudeConfig` and `syncToClaudeConfig` are mirror-images — both propagate deletions for file and directory mappings. Keep them in sync when changing one.
    - `meta.json` (`createMetaJson`/`readMetaJson`) tracks `lastSync`, machine id, and platform inside `.claude-sync/`.
 
 2. **Profiles** (`src/lib/profiles.ts`, `src/commands/profile.ts`) — lets several Claude configs coexist. A profile lives in `~/.claude-<name>/` and **symlinks** the `SHARED_ITEMS` (settings.json, hooks/, agents/, skills/, commands/, plugins/, keybindings.json) back to `~/.claude/`, so edits to the main config propagate instantly. A `claude-<name>` shell alias (written into `.zshrc`/`.bashrc`) launches Claude Code with `CLAUDE_CONFIG_DIR` pointed at the profile dir. `profiles.json` (in `.claude-sync/`) is the registry.

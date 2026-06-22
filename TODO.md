@@ -82,18 +82,20 @@ sides existed, regardless of contents.
       each, relying on push's `git pull --rebase` to merge → pull → assert both
       edits present on both machines). The `sync.ts` fix was **not** weakened.
 
-## Follow-up: warn before pull deletes local-only files (safety)
+## Follow-up: warn before pull deletes local-only files (safety) ✅ DONE
 
 Surfaced by Codex while reviewing the convergence change. `sync pull` now
 mirrors the repo onto `~/.claude`, so a file that exists locally but was **never
 pushed** is permanently deleted on pull. The existing pull confirmation prompt
-(`src/commands/sync.ts` ~line 152) only warns about the **sync repo's** dirty
-git state — it does not mention local-only files under `~/.claude` that the
-mirror will remove.
+only warned about the **sync repo's** dirty git state — it did not mention
+local-only files under `~/.claude` that the mirror would remove.
 
-- [ ] Before applying the mirror, compute the set of local-only files that would
-      be deleted (run `syncToClaudeConfig` with `dryRun` and collect `deleted`
-      results) and, when not `--force`, show a count + representative paths and
-      require confirmation.
-- [ ] At minimum, update the prompt copy to state that un-pushed files under
-      `~/.claude` may be permanently deleted.
+- [x] Before applying the mirror, `handleSyncPull` runs `syncToClaudeConfig` with
+      `dryRun` and collects the `deleted` results. If any, it prints the count +
+      the full list of paths. When not `--force` it requires confirmation; if
+      declined it returns early (repo is at upstream, `~/.claude` untouched —
+      re-running pull applies). Under `--force` the list is still printed as an
+      audit trail but no prompt is shown.
+- [x] Covered by two unit tests in `tests/unit/commands/commands.test.ts`
+      (decline aborts the apply; `--force` skips the prompt and applies). The
+      whole integration suite still passes (all pull calls use `--force`).

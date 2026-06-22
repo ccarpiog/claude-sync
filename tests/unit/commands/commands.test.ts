@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { syncCommand } from '../../../src/commands/sync.js';
+import { syncCommand, handleSyncPull } from '../../../src/commands/sync.js';
 import { initCommand } from '../../../src/commands/init.js';
 import { pullCommand } from '../../../src/commands/pull.js';
 import { pushCommand } from '../../../src/commands/push.js';
@@ -10,6 +10,8 @@ import * as logger from '../../../src/utils/logger.js';
 import * as paths from '../../../src/lib/paths.js';
 import * as syncSetup from '../../../src/lib/sync-setup.js';
 import * as prompts from '../../../src/utils/prompts.js';
+import * as git from '../../../src/lib/git.js';
+import * as sync from '../../../src/lib/sync.js';
 
 describe('sync command group (#13)', () => {
   it('has subcommands: setup, push, pull, status', () => {
@@ -152,5 +154,81 @@ describe('deprecated commands (#13, #39)', () => {
     expect(statusCommand).toBeDefined();
     expect(statusCommand.name()).toBe('status');
     expect((statusCommand as unknown as { _hidden: boolean })._hidden).toBe(true);
+  });
+});
+
+describe('sync pull deletes-local-files warning', () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-sync-test-'));
+    const claudeSyncDir = path.join(tempDir, '.claude-sync');
+    await fs.ensureDir(claudeSyncDir);
+
+    vi.spyOn(paths, 'getConfigPaths').mockReturnValue({
+      claudeSyncDir,
+      claudeConfigDir: path.join(tempDir, '.claude'),
+      platform: 'linux',
+    });
+
+    // Stub the git layer so no real repo work happens; a clean status means the
+    // first (discard-repo-changes) prompt is skipped, isolating the new prompt.
+    vi.spyOn(git, 'isGitRepo').mockResolvedValue(true);
+    vi.spyOn(git, 'getGitStatus').mockResolvedValue({
+      branch: 'main',
+      remote: 'origin',
+      isClean: true,
+      modified: [],
+      untracked: [],
+      ahead: 0,
+      behind: 0,
+    });
+    vi.spyOn(git, 'resetHard').mockResolvedValue(undefined);
+    vi.spyOn(git, 'cleanUntracked').mockResolvedValue(undefined);
+    vi.spyOn(git, 'pull').mockResolvedValue({ success: true, message: 'Pulled' });
+    vi.spyOn(git, 'hasMergeConflicts').mockResolvedValue(false);
+    vi.spyOn(sync, 'updateLastSync').mockResolvedValue(undefined);
+
+    // The mirror would delete one local file (absent from the synced repo).
+    vi.spyOn(sync, 'syncToClaudeConfig').mockResolvedValue([
+      { file: 'CLAUDE.md', action: 'deleted', source: 'a', target: 'b' },
+    ]);
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await fs.remove(tempDir);
+  });
+
+  it('aborts the apply when the user declines the deletion prompt', async () => {
+    const confirmSpy = vi.spyOn(prompts, 'confirm').mockResolvedValue(false);
+
+    await handleSyncPull({});
+
+    // Prompted about the deletion...
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'Delete these local files and apply?',
+      false
+    );
+    // ...and aborted before the real apply: only the dry-run preview ran, and
+    // the last-sync timestamp was not updated.
+    expect(sync.syncToClaudeConfig).toHaveBeenCalledTimes(1);
+    expect(sync.syncToClaudeConfig).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      true
+    );
+    expect(sync.updateLastSync).not.toHaveBeenCalled();
+  });
+
+  it('skips the prompt and applies when --force is used', async () => {
+    const confirmSpy = vi.spyOn(prompts, 'confirm').mockResolvedValue(false);
+
+    await handleSyncPull({ force: true });
+
+    // No prompt under --force, but the apply still runs (preview + real).
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(sync.syncToClaudeConfig).toHaveBeenCalledTimes(2);
+    expect(sync.updateLastSync).toHaveBeenCalled();
   });
 });

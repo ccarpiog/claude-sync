@@ -17,31 +17,41 @@ Then you sit down at another machine and... nothing. Back to square one. Or you 
 > **Note:** this fork is **not** published to the npm registry (the `claude-sync`
 > package name there belongs to an unrelated project). Install it from GitHub.
 
-Requires **Node 18+** and **git**.
+Requires **Node 18+**.
 
 ```bash
-# Install globally from GitHub — no build step required
-npm install -g github:ccarpiog/claude-sync
+# Install globally from the latest GitHub tarball — no build step required
+npm install -g "https://github.com/ccarpiog/claude-sync/archive/refs/heads/main.tar.gz"
 ```
 
 The compiled output (`dist/`) is committed to the repo, so this works on any
-machine with Node + git regardless of its npm config (no TypeScript toolchain or
-dev dependencies needed at install time).
+machine with Node regardless of its npm config (no TypeScript toolchain or dev
+dependencies needed at install time).
+
+> **Why the tarball URL and not `npm install -g github:ccarpiog/claude-sync`?**
+> npm has a long-standing bug where a **global** install of a *git* dependency
+> leaves the package as a symlink to a temporary clone directory that npm then
+> deletes — so `claude-sync` ends up "command not found". Installing from the
+> **tarball** URL copies the files properly and avoids this. (The `github:` form
+> still works fine for a *local*, non-global `npm install`.)
 
 <details>
-<summary>Install from source (for development)</summary>
+<summary>Install from source (for development, or to track a clone you can edit)</summary>
 
 ```bash
 git clone https://github.com/ccarpiog/claude-sync.git
 cd claude-sync
 npm install        # install dependencies
 npm run build      # compile TypeScript → dist/
-npm install -g .   # register the global `claude-sync` command (or: npm link)
+npm link           # register the global `claude-sync` command (symlinks to this clone)
 ```
 
 </details>
 
-Verify the install with `claude-sync --help`.
+After installing, verify with `claude-sync --help`. If your shell still says
+`command not found`, the npm global `bin` directory isn't on your `PATH` — run
+`npm prefix -g` and ensure `<that path>/bin` is on your `PATH` (then open a new
+terminal or run `hash -r`).
 
 ## Quick Start
 

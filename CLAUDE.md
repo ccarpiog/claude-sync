@@ -10,7 +10,7 @@ claude-sync is a CLI that manages multiple Claude Code **profiles** and optional
 
 ## Commands
 
-**`dist/` is committed to the repo** (not gitignored) so the tool can be installed straight from GitHub (`npm install -g github:ccarpiog/claude-sync`) with no build step — there is intentionally **no** `prepare`/`postinstall` build hook, because that fails on machines configured to skip dev dependencies (`omit=dev`/`NODE_ENV=production` → no `tsc`). Consequence: **rebuild and commit `dist/` whenever you change `src/`** (`npm run build`, then commit). CI (`.github/workflows/ci.yml`) fails if the committed `dist/` is stale.
+**`dist/` is committed to the repo** (not gitignored) so the tool can be installed straight from GitHub's tarball URL (`npm install -g "https://github.com/ccarpiog/claude-sync/archive/refs/heads/main.tar.gz"`, see README "Installation") with no build step. There is intentionally **no** `prepare`/`postinstall` build hook, because that fails on machines configured to skip dev dependencies (`omit=dev`/`NODE_ENV=production` → no `tsc`). The README uses the **tarball** URL rather than `npm install -g github:…` because npm's *global git* install has a long-standing bug that symlinks the package to a temp clone dir it then deletes (→ "command not found"); a tarball install copies the files correctly. Consequence of committing `dist/`: **rebuild and commit `dist/` whenever you change `src/`** (`npm run build`, then commit). CI (`.github/workflows/ci.yml`) fails if the committed `dist/` is stale.
 
 ```bash
 npm run build              # Compile TS → dist/ (tsc -p tsconfig.build.json) — commit the result

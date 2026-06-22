@@ -225,6 +225,61 @@ describe('sync.ts', () => {
 
       expect(await fs.pathExists(path.join(claudeSyncDir, 'hooks', 'test.sh'))).toBe(true);
     });
+
+    it('should sync only plugin manifests, not the cloned repos/caches', async () => {
+      const claudeDir = path.join(tempDir, '.claude');
+      const claudeSyncDir = path.join(tempDir, '.claude-sync');
+
+      await fs.ensureDir(path.join(claudeDir, 'plugins'));
+      await fs.ensureDir(claudeSyncDir);
+
+      // Portable manifests (should sync)
+      await fs.writeFile(path.join(claudeDir, 'plugins', 'config.json'), '{}');
+      await fs.writeFile(
+        path.join(claudeDir, 'plugins', 'installed_plugins.json'),
+        '{"a":1}'
+      );
+      await fs.writeFile(
+        path.join(claudeDir, 'plugins', 'known_marketplaces.json'),
+        '{"m":1}'
+      );
+      // Machine-local artifacts living next to the manifests (must NOT sync)
+      await fs.ensureDir(path.join(claudeDir, 'plugins', 'repos', 'some-repo'));
+      await fs.writeFile(
+        path.join(claudeDir, 'plugins', 'repos', 'some-repo', 'big.bin'),
+        'x'
+      );
+      await fs.writeFile(
+        path.join(claudeDir, 'plugins', 'install-counts-cache.json'),
+        '{}'
+      );
+
+      await syncFromClaudeConfig(claudeDir, claudeSyncDir);
+
+      // Manifests copied, with the nested plugins/ parent created implicitly
+      expect(
+        await fs.pathExists(path.join(claudeSyncDir, 'plugins', 'config.json'))
+      ).toBe(true);
+      expect(
+        await fs.pathExists(
+          path.join(claudeSyncDir, 'plugins', 'installed_plugins.json')
+        )
+      ).toBe(true);
+      expect(
+        await fs.pathExists(
+          path.join(claudeSyncDir, 'plugins', 'known_marketplaces.json')
+        )
+      ).toBe(true);
+      // Siblings left behind
+      expect(
+        await fs.pathExists(path.join(claudeSyncDir, 'plugins', 'repos'))
+      ).toBe(false);
+      expect(
+        await fs.pathExists(
+          path.join(claudeSyncDir, 'plugins', 'install-counts-cache.json')
+        )
+      ).toBe(false);
+    });
   });
 
   describe('syncToClaudeConfig', () => {

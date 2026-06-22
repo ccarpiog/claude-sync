@@ -30,8 +30,8 @@ const profileCreateCommand = new Command('create')
   .option('--no-share-claude-md', 'Do not share CLAUDE.md with this profile')
   .action(async (nameArg: string | undefined, options: { yes?: boolean; shell?: string; shareStatusline?: boolean; shareClaudeMd?: boolean }) => {
     // Verify claude-sync is initialized
-    const jcDir = getClaudeSyncDir();
-    if (!(await fs.pathExists(jcDir))) {
+    const claudeSyncDir = getClaudeSyncDir();
+    if (!(await fs.pathExists(claudeSyncDir))) {
       throw new ClaudeSyncError(
         'claude-sync is not initialized',
         ErrorCode.NOT_INITIALIZED,

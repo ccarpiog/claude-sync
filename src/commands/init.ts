@@ -9,6 +9,7 @@ import {
   writeMetaJson,
 } from '../lib/sync.js';
 import { setupGitSync } from '../lib/sync-setup.js';
+import { migrateLegacyLayout } from '../lib/migrate.js';
 import { printLogo } from '../utils/logo.js';
 
 export const initCommand = new Command('init')
@@ -21,6 +22,19 @@ export const initCommand = new Command('init')
 
     printLogo();
     logger.heading('Setup');
+
+    // Migrate from the legacy ".jean-claude" layout if present (one-time, no-op
+    // afterwards). Runs before the initialized-check so a migrated repo is
+    // recognized as already set up instead of being re-created empty.
+    const migration = await migrateLegacyLayout(claudeConfigDir, claudeSyncDir);
+    if (migration.movedDir) {
+      logger.info('Migrated legacy ".jean-claude" directory to ".claude-sync".');
+    }
+    if (migration.updatedShellFiles.length > 0) {
+      logger.info(
+        `Updated legacy profile aliases in: ${migration.updatedShellFiles.join(', ')}`
+      );
+    }
 
     // Check if already initialized
     const metaPath = path.join(claudeSyncDir, 'meta.json');

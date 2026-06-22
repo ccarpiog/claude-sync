@@ -208,8 +208,8 @@ describe('profiles.ts', () => {
     it('should not leave temp files on successful save', async () => {
       await saveProfiles({ profiles: {} });
 
-      const jcDir = getClaudeSyncDir();
-      const files = await fs.readdir(jcDir);
+      const syncDir = getClaudeSyncDir();
+      const files = await fs.readdir(syncDir);
       const tmpFiles = files.filter(f => f.endsWith('.tmp'));
       expect(tmpFiles).toEqual([]);
     });
@@ -287,6 +287,35 @@ describe('profiles.ts', () => {
       // Don't create any shared items
       const created = await createSymlinks(sourceDir, targetDir);
       expect(created).toEqual([]);
+    });
+
+    it('should symlink the commands/ directory when present', async () => {
+      const sourceDir = path.join(tempDir, 'source');
+      const targetDir = path.join(tempDir, 'target');
+      await fs.ensureDir(sourceDir);
+      await fs.ensureDir(targetDir);
+
+      await fs.ensureDir(path.join(sourceDir, 'commands'));
+      await fs.writeFile(
+        path.join(sourceDir, 'commands', 'audit.md'),
+        '# audit command'
+      );
+
+      const created = await createSymlinks(sourceDir, targetDir);
+
+      expect(created).toContain('commands');
+      const stat = await fs.lstat(path.join(targetDir, 'commands'));
+      expect(stat.isSymbolicLink()).toBe(true);
+      // The symlink resolves through to the shared command file
+      const content = await fs.readFile(
+        path.join(targetDir, 'commands', 'audit.md'),
+        'utf-8'
+      );
+      expect(content).toBe('# audit command');
+    });
+
+    it('declares commands/ in SHARED_ITEMS', () => {
+      expect(SHARED_ITEMS.map((i) => i.name)).toContain('commands');
     });
   });
 });

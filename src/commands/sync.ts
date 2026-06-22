@@ -186,7 +186,20 @@ export async function handleSyncPull(options: { force?: boolean } = {}): Promise
   // state, not the live config.
   const preview = await syncToClaudeConfig(claudeSyncDir, claudeConfigDir, true);
   const deletions = preview.filter((r) => r.action === 'deleted');
+  const hasIncomingContent = preview.some(
+    (r) => r.action === 'created' || r.action === 'updated'
+  );
   if (deletions.length > 0) {
+    // If the synced repo has nothing to apply (only deletions), it is almost
+    // certainly an empty/blank repo and the user meant to PUSH from this machine
+    // rather than pull — pulling would wipe the local config. Flag that clearly.
+    if (!hasIncomingContent) {
+      logger.warn('The synced repository has no configuration to apply — it looks empty.');
+      logger.dim(
+        'If this is a fresh repo, run "claude-sync sync push" from this machine to populate it instead.'
+      );
+      console.log('');
+    }
     logger.warn(
       `${deletions.length} local item(s) will be deleted (absent from the synced repo):`
     );

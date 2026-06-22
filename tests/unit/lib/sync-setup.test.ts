@@ -103,6 +103,30 @@ describe('sync-setup.ts', () => {
     });
   });
 
+  describe('empty remote (commit but no files) skips the warning', () => {
+    it('does not prompt or throw when the cloned repo has no content', async () => {
+      vi.mocked(testRemoteConnection).mockResolvedValue(true);
+      // Clone a repo that has a commit but ZERO files (e.g. a freshly-created
+      // remote with an empty "reset" commit) — the scary overwrite warning must
+      // not fire because there is nothing to overwrite the local config with.
+      vi.mocked(cloneRepo).mockImplementation(async (_url: string, targetDir: string) => {
+        const git = simpleGit(targetDir);
+        await git.init();
+        await git.addConfig('user.email', 'test@example.com');
+        await git.addConfig('user.name', 'Test');
+        await git.commit('Reset repository to empty state', { '--allow-empty': null });
+      });
+      vi.mocked(readMetaJson).mockResolvedValue(null);
+
+      await expect(
+        setupGitSync(tempDir, 'https://example.com/repo.git')
+      ).resolves.toBeUndefined();
+
+      // No confirmation prompt for an empty repo.
+      expect(confirm).not.toHaveBeenCalled();
+    });
+  });
+
   describe('#19 — Reconfigure existing remote', () => {
     it('should update remote URL when urlArg is provided and different', async () => {
       // Set up a real local git repo with a remote

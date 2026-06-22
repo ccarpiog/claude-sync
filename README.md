@@ -12,12 +12,39 @@ Then you sit down at another machine and... nothing. Back to square one. Or you 
 
 **Claude-sync fixes that.** It manages multiple Claude Code profiles and optionally syncs everything across machines via Git.
 
+## Installation
+
+> **Note:** this fork is **not** published to the npm registry (the `claude-sync`
+> package name there belongs to an unrelated project). Install it from GitHub.
+
+Requires **Node 18+** and **git**.
+
+```bash
+# Install globally from GitHub (builds automatically on install)
+npm install -g github:ccarpiog/claude-sync
+```
+
+<details>
+<summary>Install from source (for development, or if the one-liner fails)</summary>
+
+```bash
+git clone https://github.com/ccarpiog/claude-sync.git
+cd claude-sync
+npm install        # runs the build via the "prepare" script
+npm run build      # (re)compile if needed
+npm install -g .   # register the global `claude-sync` command (or: npm link)
+```
+
+If you install with `--ignore-scripts`, the `prepare`/build step is skipped and
+the `claude-sync` binary won't exist — run `npm run build` manually afterwards.
+
+</details>
+
+Verify the install with `claude-sync --help`.
+
 ## Quick Start
 
 ```bash
-# Install globally
-npm install -g claude-sync
-
 # Initialize claude-sync
 claude-sync init
 
@@ -27,6 +54,24 @@ claude-sync profile create work
 # Launch Claude Code with your work profile
 claude-work
 ```
+
+### Syncing config to a new machine
+
+```bash
+# First machine: initialize, then push your config up to a (possibly empty) repo
+claude-sync init --sync --url git@github.com:you/claude-config.git
+claude-sync sync push
+
+# Other machines: initialize against the same repo, then pull it down
+claude-sync init --sync --url git@github.com:you/claude-config.git
+claude-sync sync pull
+```
+
+> `sync pull` **mirrors** the repo onto `~/.claude`, so it deletes local files
+> that aren't in the repo (it lists them and asks first, unless you pass
+> `--force`). Rule of thumb: **push from the machine with the changes, pull on
+> the others.** When linking a brand-new empty repo, `push` first to populate it
+> — don't `pull` onto a machine whose config you want to keep.
 
 ## Profiles
 

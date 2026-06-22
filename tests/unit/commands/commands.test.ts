@@ -231,4 +231,17 @@ describe('sync pull deletes-local-files warning', () => {
     expect(sync.syncToClaudeConfig).toHaveBeenCalledTimes(2);
     expect(sync.updateLastSync).toHaveBeenCalled();
   });
+
+  it('hints to push when the synced repo looks empty (only deletions)', async () => {
+    // The mocked preview returns only a deletion and no created/updated entries,
+    // so the repo has nothing to apply — pull should suggest pushing instead.
+    const warnSpy = vi.spyOn(logger.logger, 'warn');
+    vi.spyOn(prompts, 'confirm').mockResolvedValue(false);
+
+    await handleSyncPull({});
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('looks empty')
+    );
+  });
 });

@@ -7,12 +7,32 @@ import { isGitRepo, createGit, initRepo, addRemote, testRemoteConnection, cloneR
 import { readMetaJson } from './sync.js';
 import { ClaudeSyncError, ErrorCode } from '../types/index.js';
 
+/**
+ * Warn the user when the remote they are linking does not look like a
+ * claude-sync config repo, so a later `sync pull` cannot silently overwrite or
+ * delete their Claude Code configuration. A repo that claude-sync created (has a
+ * `meta.json` with `managedBy: 'claude-sync'`) is trusted. A repo with no
+ * content at all — only a `.git/` (e.g. a freshly-created remote whose single
+ * commit holds no files) — is a safe first-push target and is NOT a cause for
+ * alarm, so it gets a friendly hint instead of a scary warning. Only a
+ * non-empty repo that is missing the claude-sync marker triggers the prompt.
+ * @param {string} dir The cloned working tree of the remote.
+ * @returns {Promise<void>} Resolves when validated; throws if the user declines.
+ */
 async function warnIfNotClaudeSyncRepo(dir: string): Promise<void> {
   const meta = await readMetaJson(dir);
   if (meta?.managedBy === 'claude-sync') return;
 
-  logger.warn('This repository does not appear to be a claude-sync config repo.');
-  logger.dim('It may overwrite your Claude Code configuration with unrelated files.');
+  // Any entry other than .git counts as content (.gitignore, LICENSE, a stray
+  // dir, …) — be conservative and warn if anything could be overwritten.
+  const contents = (await fs.readdir(dir)).filter((entry) => entry !== '.git');
+  if (contents.length === 0) {
+    logger.dim('Remote repository is empty — it will be populated on your first "sync push".');
+    return;
+  }
+
+  logger.warn('This repository is not empty and does not look like a claude-sync config repo.');
+  logger.dim('Pulling from it could overwrite or delete your Claude Code configuration.');
   const proceed = await confirm('Continue anyway?', false);
   if (!proceed) {
     throw new ClaudeSyncError(
@@ -21,7 +41,7 @@ async function warnIfNotClaudeSyncRepo(dir: string): Promise<void> {
       'Use a repository created by "claude-sync init" with syncing enabled.'
     );
   }
-}
+} // End of function warnIfNotClaudeSyncRepo()
 
 /**
  * Interactive Git remote setup flow.

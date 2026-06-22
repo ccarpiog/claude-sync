@@ -3,11 +3,11 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
       - 'release/*'
   pull_request:
     branches:
-      - master
+      - main
       - 'release/*'
 
 jobs:
@@ -34,6 +34,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # dist/ is committed so the tool installs straight from GitHub without a
+      # build step. Fail if the committed dist/ is out of date with src/.
+      - name: Verify committed dist/ is up to date
+        run: |
+          if ! git diff --exit-code -- dist; then
+            echo "::error::dist/ is stale — run 'npm run build' and commit the result."
+            exit 1
+          fi
 
       - name: Unit tests
         run: npm run test:unit

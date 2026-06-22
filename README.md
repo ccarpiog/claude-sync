@@ -20,23 +20,24 @@ Then you sit down at another machine and... nothing. Back to square one. Or you 
 Requires **Node 18+** and **git**.
 
 ```bash
-# Install globally from GitHub (builds automatically on install)
+# Install globally from GitHub — no build step required
 npm install -g github:ccarpiog/claude-sync
 ```
 
+The compiled output (`dist/`) is committed to the repo, so this works on any
+machine with Node + git regardless of its npm config (no TypeScript toolchain or
+dev dependencies needed at install time).
+
 <details>
-<summary>Install from source (for development, or if the one-liner fails)</summary>
+<summary>Install from source (for development)</summary>
 
 ```bash
 git clone https://github.com/ccarpiog/claude-sync.git
 cd claude-sync
-npm install        # runs the build via the "prepare" script
-npm run build      # (re)compile if needed
+npm install        # install dependencies
+npm run build      # compile TypeScript → dist/
 npm install -g .   # register the global `claude-sync` command (or: npm link)
 ```
-
-If you install with `--ignore-scripts`, the `prepare`/build step is skipped and
-the `claude-sync` binary won't exist — run `npm run build` manually afterwards.
 
 </details>
 

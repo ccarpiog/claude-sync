@@ -1,0 +1,1 @@
+{"version":3,"file":"paths.d.ts","sourceRoot":"","sources":["../../src/lib/paths.ts"],"names":[],"mappings":"AAGA,OAAO,KAAK,EAAE,WAAW,EAAE,MAAM,mBAAmB,CAAC;AAGrD,wBAAgB,cAAc,IAAI,QAAQ,GAAG,OAAO,CAUnD;AAED,wBAAgB,gBAAgB,IAAI,MAAM,CAEzC;AAED,wBAAgB,qBAAqB,IAAI,MAAM,CAmB9C;AAED,wBAAgB,cAAc,IAAI,WAAW,CAM5C;AAED,wBAAgB,SAAS,CAAC,OAAO,EAAE,MAAM,GAAG,IAAI,CAI/C"}

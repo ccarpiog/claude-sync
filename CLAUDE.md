@@ -10,8 +10,10 @@ claude-sync is a CLI that manages multiple Claude Code **profiles** and optional
 
 ## Commands
 
+**`dist/` is committed to the repo** (not gitignored) so the tool can be installed straight from GitHub (`npm install -g github:ccarpiog/claude-sync`) with no build step — there is intentionally **no** `prepare`/`postinstall` build hook, because that fails on machines configured to skip dev dependencies (`omit=dev`/`NODE_ENV=production` → no `tsc`). Consequence: **rebuild and commit `dist/` whenever you change `src/`** (`npm run build`, then commit). CI (`.github/workflows/ci.yml`) fails if the committed `dist/` is stale.
+
 ```bash
-npm run build              # Compile TS → dist/ (tsc -p tsconfig.build.json)
+npm run build              # Compile TS → dist/ (tsc -p tsconfig.build.json) — commit the result
 npm run dev -- <args>      # Run CLI from source without building (tsx src/index.ts)
 npm run lint               # eslint src
 npm run lint:fix

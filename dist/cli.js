@@ -1,0 +1,61 @@
+import { Command } from 'commander';
+import chalk from 'chalk';
+import { createRequire } from 'module';
+import { initCommand, pullCommand, pushCommand, statusCommand, profileCommand, syncCommand, } from './commands/index.js';
+import { ClaudeSyncError } from './types/index.js';
+import { printLogo } from './utils/logo.js';
+const require = createRequire(import.meta.url);
+const { version: VERSION } = require('../package.json');
+export function createProgram() {
+    const program = new Command();
+    program
+        .name('claude-sync')
+        .description('Manage and sync Claude Code configuration across machines')
+        .version(VERSION)
+        .addHelpText('before', () => {
+        printLogo();
+        return '';
+    });
+    program.addCommand(initCommand);
+    program.addCommand(syncCommand);
+    program.addCommand(profileCommand);
+    // Deprecated — kept as hidden commands with redirect messages
+    program.addCommand(pullCommand);
+    program.addCommand(pushCommand);
+    program.addCommand(statusCommand);
+    return program;
+}
+export async function run(argv) {
+    const program = createProgram();
+    // Global error handling
+    program.exitOverride();
+    try {
+        await program.parseAsync(argv);
+    }
+    catch (err) {
+        if (err instanceof ClaudeSyncError) {
+            console.error(chalk.red('error') + ' ' + err.message);
+            if (err.suggestion) {
+                console.log('\n' + chalk.dim('Suggestion: ') + err.suggestion);
+            }
+            process.exit(1);
+        }
+        // Commander errors (like --help, --version)
+        if (err && typeof err === 'object' && 'code' in err) {
+            const code = err.code;
+            if (code === 'commander.helpDisplayed' || code === 'commander.version' || code === 'commander.help') {
+                process.exit(0);
+            }
+        }
+        // Unexpected error
+        console.error(chalk.red('error') + ' An unexpected error occurred');
+        if (process.env.DEBUG) {
+            console.error(err);
+        }
+        else {
+            console.log(chalk.dim('Run with DEBUG=1 for more details'));
+        }
+        process.exit(1);
+    }
+}
+//# sourceMappingURL=cli.js.map

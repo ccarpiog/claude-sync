@@ -1,0 +1,82 @@
+import { Command } from 'commander';
+import fs from 'fs-extra';
+import path from 'path';
+import { logger, formatPath } from '../utils/logger.js';
+import { confirm } from '../utils/prompts.js';
+import { getConfigPaths, ensureDir } from '../lib/paths.js';
+import { createMetaJson, writeMetaJson, } from '../lib/sync.js';
+import { setupGitSync } from '../lib/sync-setup.js';
+import { migrateLegacyLayout } from '../lib/migrate.js';
+import { printLogo } from '../utils/logo.js';
+export const initCommand = new Command('init')
+    .description('Initialize claude-sync on this machine')
+    .option('--sync', 'Set up Git-based syncing without prompting')
+    .option('--no-sync', 'Skip Git sync setup without prompting')
+    .option('--url <repo-url>', 'Repository URL for sync setup (implies --sync)')
+    .action(async (options) => {
+    const { claudeSyncDir, claudeConfigDir } = getConfigPaths();
+    printLogo();
+    logger.heading('Setup');
+    // Migrate from the legacy ".jean-claude" layout if present (one-time, no-op
+    // afterwards). Runs before the initialized-check so a migrated repo is
+    // recognized as already set up instead of being re-created empty.
+    const migration = await migrateLegacyLayout(claudeConfigDir, claudeSyncDir);
+    if (migration.movedDir) {
+        logger.info('Migrated legacy ".jean-claude" directory to ".claude-sync".');
+    }
+    if (migration.updatedShellFiles.length > 0) {
+        logger.info(`Updated legacy profile aliases in: ${migration.updatedShellFiles.join(', ')}`);
+    }
+    // Check if already initialized
+    const metaPath = path.join(claudeSyncDir, 'meta.json');
+    if (fs.existsSync(metaPath)) {
+        logger.success(`Already initialized at ${formatPath(claudeSyncDir)}`);
+        logger.dim('Run "claude-sync sync status" to see current state.');
+        return;
+    }
+    // Create the claude-sync directory and meta.json
+    ensureDir(claudeSyncDir);
+    const meta = createMetaJson(claudeConfigDir);
+    await writeMetaJson(claudeSyncDir, meta);
+    // Check for existing git repo (partial init recovery)
+    const gitDir = path.join(claudeSyncDir, '.git');
+    if (fs.existsSync(gitDir)) {
+        logger.info('Found existing Git repository — reusing it.');
+    }
+    let wantSync;
+    if (options.url) {
+        if (options.sync === false) {
+            logger.warn('--url implies --sync; ignoring --no-sync.');
+        }
+        wantSync = true;
+    }
+    else if (options.sync !== undefined) {
+        wantSync = options.sync;
+    }
+    else {
+        console.log('');
+        wantSync = await confirm('Would you like to set up syncing with a Git remote?');
+    }
+    if (wantSync) {
+        await setupGitSync(claudeSyncDir, options.url);
+    }
+    // Done
+    console.log('');
+    logger.success('claude-sync is installed!');
+    console.log('');
+    logger.dim('Next steps:');
+    if (wantSync) {
+        logger.list([
+            'Run "claude-sync profile create <name>" to create a profile',
+            'Run "claude-sync sync push" to push your config to Git',
+            'Run "claude-sync sync pull" on other machines to sync',
+        ]);
+    }
+    else {
+        logger.list([
+            'Run "claude-sync profile create <name>" to create a profile',
+            'Run "claude-sync sync setup" to configure syncing later',
+        ]);
+    }
+});
+//# sourceMappingURL=init.js.map

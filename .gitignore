@@ -1,8 +1,10 @@
 # Dependencies
 node_modules/
 
-# Build output
-dist/
+# Build output is intentionally committed so the tool can be installed straight
+# from GitHub (npm install -g github:ccarpiog/claude-sync) without a build step.
+# Rebuild with `npm run build` and commit dist/ whenever src/ changes — CI fails
+# if the committed dist/ is stale.
 
 # IDE
 .idea/

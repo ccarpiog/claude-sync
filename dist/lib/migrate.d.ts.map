@@ -1,0 +1,1 @@
+{"version":3,"file":"migrate.d.ts","sourceRoot":"","sources":["../../src/lib/migrate.ts"],"names":[],"mappings":"AAgBA,MAAM,WAAW,eAAe;IAC9B,QAAQ,EAAE,OAAO,CAAC;IAClB,iBAAiB,EAAE,MAAM,EAAE,CAAC;CAC7B;AAED;;;;;;GAMG;AACH,wBAAsB,yBAAyB,IAAI,OAAO,CAAC,MAAM,EAAE,CAAC,CAmBnE;AAED;;;;;;;;;GASG;AACH,wBAAsB,mBAAmB,CACvC,eAAe,EAAE,MAAM,EACvB,aAAa,EAAE,MAAM,GACpB,OAAO,CAAC,eAAe,CAAC,CAY1B"}

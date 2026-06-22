@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 claude-sync is a CLI that manages multiple Claude Code **profiles** and optionally **syncs** Claude Code configuration across machines via Git. It is a fork of [jean-claude](https://github.com/MikeVeerman/jean-claude) by Mike Veerman.
 
-**Naming note:** the original `jean-claude` name has been fully renamed to `claude-sync` throughout — branding *and* code (CLI program name, `ClaudeSyncError`, `getClaudeSyncDir`, the managed `.claude-sync/` directory, etc.). The only remaining `jean-claude` references are deliberate upstream attribution (in `README.md`, `package.json`, and this file's links to the original repo). When adding new identifiers, use the `claude-sync` / `ClaudeSync` / `claudeSync` forms.
+**Naming note:** the original `jean-claude` name has been fully renamed to `claude-sync` throughout — branding *and* code (CLI program name, `ClaudeSyncError`, `getClaudeSyncDir`, the managed `.claude-sync/` directory, etc.). The only remaining `jean-claude` references are deliberate upstream attribution (in `README.md`, `package.json`, this file's links to the original repo) and `src/lib/migrate.ts`, which intentionally reads the old name to migrate pre-rename installs (see Architecture). When adding new identifiers, use the `claude-sync` / `ClaudeSync` / `claudeSync` forms.
 
 ## Commands
 
@@ -51,9 +51,11 @@ These back two largely independent features:
 - `CLAUDE.md` and `statusline.sh` are synced (`FILE_MAPPINGS`) but **not** symlinked (`SHARED_ITEMS`). For profiles they are *optionally* shared via `--share-claude-md` / `--share-statusline`; otherwise each profile gets an independent copy.
 - `plugins/` is symlinked **whole** (so all profiles on a machine share installed plugins) but only its **manifest files** (`plugins/config.json`, `plugins/installed_plugins.json`, `plugins/known_marketplaces.json`) are synced across machines — the cloned marketplace repos and caches under `plugins/` are machine-local installed artifacts, like `node_modules`. Note `FILE_MAPPINGS` entries can be nested file paths (e.g. `plugins/config.json`), not just top-level names.
 
+**Legacy migration:** `init` (`src/commands/init.ts`) calls `migrateLegacyLayout` (`src/lib/migrate.ts`) before anything else — a one-time, idempotent step that moves a pre-rename `~/.claude/.jean-claude` repo to `.claude-sync` (never clobbering an existing one) and rewrites stale `# jean-claude profile:` shell-alias markers to `# claude-sync profile:`. It runs before the already-initialized check so a migrated repo is recognized rather than re-created empty.
+
 **Errors:** throw `ClaudeSyncError(message, ErrorCode, suggestion?)` (`src/types/index.ts`) rather than bare `Error` — the suggestion is surfaced to the user by the central handler. Platform support is macOS/Linux only (`detectPlatform`).
 
 ## Testing layout
 
-- `tests/unit/**/*.test.ts` — Vitest, mocked filesystem/git. This is the `include` glob; only these run as unit tests.
-- `test-integration.sh` and `tests/e2e/*.sh` — Bash end-to-end tests that exercise real git repos and simulate multiple machines (init, profiles, push/pull, multi-machine convergence, edge cases). `lib/git.ts`, `lib/paths.ts`, and the command handlers are covered here rather than in unit tests. See `tests/README.md`.
+- `tests/unit/**/*.test.ts` — Vitest, mostly against real temp dirs / mocked `getConfigPaths`. This is the `include` glob; only these run as unit tests. Covers `lib/sync.ts`, `lib/profiles.ts`, `lib/sync-setup.ts`, `lib/git.ts`, `lib/migrate.ts`, `commands/*`, `types`, and `utils/logger`.
+- `test-integration.sh` and `tests/e2e/*.sh` — Bash end-to-end tests that exercise real git repos and simulate multiple machines (init, profiles, push/pull, multi-machine convergence, edge cases). `lib/paths.ts` and full command flows are covered here. See `tests/README.md`.

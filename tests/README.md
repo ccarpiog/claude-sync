@@ -56,17 +56,21 @@ npm test
 
 Currently tested modules:
 
-- ✅ `lib/sync.ts` - File comparison, metadata operations, sync functions
+- ✅ `lib/sync.ts` - File mappings, comparison, metadata operations, sync functions
+- ✅ `lib/profiles.ts` - Profile creation, symlinks, shell aliases
+- ✅ `lib/sync-setup.ts` - Git remote setup and validation
+- ✅ `lib/git.ts` - Commit/push behavior with real temp git repos
+- ✅ `lib/migrate.ts` - Legacy `.jean-claude` → `.claude-sync` migration
+- ✅ `commands/*.ts` - Init/command behavior (e.g. flag handling)
 - ✅ `types/index.ts` - ClaudeSyncError class and ErrorCode enum
 - ✅ `utils/logger.ts` - Path formatting utility
 
 ### Modules Not Unit Tested
 
-Some modules are better tested through integration tests rather than unit tests:
+Some modules are exercised mainly through integration tests:
 
-- **`lib/git.ts`** - Git operations tested in integration tests with real git repos
-- **`lib/paths.ts`** - Platform detection tested in integration tests
-- **`commands/*.ts`** - Command logic tested end-to-end in integration tests
+- **`lib/paths.ts`** - Platform/config-dir detection tested in integration tests
+- **Full command flows** - End-to-end `init`/`sync`/`profile` behavior is covered by `test-integration.sh`
 
 ## Integration Test Coverage
 

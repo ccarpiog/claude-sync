@@ -2,22 +2,22 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import type { ConfigPaths } from '../types/index.js';
-import { JeanClaudeError, ErrorCode } from '../types/index.js';
+import { ClaudeSyncError, ErrorCode } from '../types/index.js';
 
 export function detectPlatform(): 'darwin' | 'linux' {
   const platform = os.platform();
   if (platform === 'darwin' || platform === 'linux') {
     return platform;
   }
-  throw new JeanClaudeError(
+  throw new ClaudeSyncError(
     `Unsupported platform: ${platform}`,
     ErrorCode.UNSUPPORTED_PLATFORM,
-    'Jean-Claude supports macOS and Linux only.'
+    'claude-sync supports macOS and Linux only.'
   );
 }
 
-export function getJeanClaudeDir(): string {
-  return path.join(detectClaudeConfigDir(), '.jean-claude');
+export function getClaudeSyncDir(): string {
+  return path.join(detectClaudeConfigDir(), '.claude-sync');
 }
 
 export function detectClaudeConfigDir(): string {
@@ -43,7 +43,7 @@ export function detectClaudeConfigDir(): string {
 
 export function getConfigPaths(): ConfigPaths {
   return {
-    jeanClaudeDir: getJeanClaudeDir(),
+    claudeSyncDir: getClaudeSyncDir(),
     claudeConfigDir: detectClaudeConfigDir(),
     platform: detectPlatform(),
   };

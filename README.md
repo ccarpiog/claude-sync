@@ -1,6 +1,8 @@
-# JEAN-CLAUDE
+# CLAUDE-SYNC
 
 **A companion for managing Claude Code profiles and syncing configuration across machines**
+
+> **Fork notice:** claude-sync is a fork of [jean-claude](https://github.com/MikeVeerman/jean-claude) by Mike Veerman. It builds on the original project's profile and Git-syncing features. All credit for the original design goes to the upstream authors — see the [original repository](https://github.com/MikeVeerman/jean-claude) for its history.
 
 ## Why?
 
@@ -8,19 +10,19 @@ You've spent hours crafting the perfect `CLAUDE.md`. Your hooks are *chef's kiss
 
 Then you sit down at another machine and... nothing. Back to square one. Or you need separate configs for your work and personal Claude accounts, but maintaining them is a pain.
 
-**Jean-Claude fixes that.** It manages multiple Claude Code profiles and optionally syncs everything across machines via Git.
+**Claude-sync fixes that.** It manages multiple Claude Code profiles and optionally syncs everything across machines via Git.
 
 ## Quick Start
 
 ```bash
 # Install globally
-npm install -g jean-claude
+npm install -g claude-sync
 
-# Initialize Jean-Claude
-jean-claude init
+# Initialize claude-sync
+claude-sync init
 
 # Create a profile for your work account
-jean-claude profile create work
+claude-sync profile create work
 
 # Launch Claude Code with your work profile
 claude-work
@@ -32,22 +34,22 @@ Profiles let you run multiple Claude Code configurations side by side — one fo
 
 ```bash
 # Create a profile (interactive — prompts for sharing preferences)
-jean-claude profile create work
+claude-sync profile create work
 
 # Create non-interactively
-jean-claude profile create work --yes --shell .zshrc
+claude-sync profile create work --yes --shell .zshrc
 
 # List your profiles
-jean-claude profile list
+claude-sync profile list
 
 # Launch Claude Code with a profile
 claude-work
 
 # Re-create symlinks if something breaks
-jean-claude profile refresh work
+claude-sync profile refresh work
 
 # Delete a profile
-jean-claude profile delete work
+claude-sync profile delete work
 ```
 
 ### How profiles work
@@ -67,10 +69,10 @@ During profile creation, you're prompted whether to share `CLAUDE.md` and `statu
 
 ```bash
 # Share both
-jean-claude profile create work --share-claude-md --share-statusline
+claude-sync profile create work --share-claude-md --share-statusline
 
 # Keep both independent
-jean-claude profile create work --no-share-claude-md --no-share-statusline
+claude-sync profile create work --no-share-claude-md --no-share-statusline
 ```
 
 Change a setting or add a hook in your main config, and all profiles see it immediately.
@@ -96,29 +98,29 @@ Syncing is optional and uses Git to keep your configuration in sync across machi
 
 ```bash
 # Set up syncing (during init or later)
-jean-claude sync setup
+claude-sync sync setup
 
 # Push your config to Git
-jean-claude sync push
+claude-sync sync push
 
 # Pull config on another machine
-jean-claude sync pull
+claude-sync sync pull
 
 # Check sync status
-jean-claude sync status
+claude-sync sync status
 ```
 
 ### Typical workflow
 
 ```bash
 # Machine 1: Initialize and push
-jean-claude init
-jean-claude profile create work --yes --shell .zshrc
-jean-claude sync push
+claude-sync init
+claude-sync profile create work --yes --shell .zshrc
+claude-sync sync push
 
 # Machine 2: Initialize, pull, and go
-jean-claude init --sync --url git@github.com:you/claude-config.git
-jean-claude sync pull
+claude-sync init --sync --url git@github.com:you/claude-config.git
+claude-sync sync pull
 claude-work  # Profile alias is ready
 ```
 
@@ -126,17 +128,17 @@ claude-work  # Profile alias is ready
 
 | Command | Description |
 |---------|-------------|
-| `jean-claude init` | Initialize Jean-Claude on this machine |
-| `jean-claude init --sync --url <repo>` | Initialize with Git syncing |
-| `jean-claude init --no-sync` | Initialize without syncing |
-| `jean-claude profile create <name>` | Create a new profile |
-| `jean-claude profile list` | List all profiles |
-| `jean-claude profile delete <name>` | Delete a profile |
-| `jean-claude profile refresh <name>` | Refresh profile symlinks |
-| `jean-claude sync setup` | Set up Git-based syncing |
-| `jean-claude sync push` | Push config to Git |
-| `jean-claude sync pull` | Pull config from Git |
-| `jean-claude sync status` | Check sync status |
+| `claude-sync init` | Initialize claude-sync on this machine |
+| `claude-sync init --sync --url <repo>` | Initialize with Git syncing |
+| `claude-sync init --no-sync` | Initialize without syncing |
+| `claude-sync profile create <name>` | Create a new profile |
+| `claude-sync profile list` | List all profiles |
+| `claude-sync profile delete <name>` | Delete a profile |
+| `claude-sync profile refresh <name>` | Refresh profile symlinks |
+| `claude-sync sync setup` | Set up Git-based syncing |
+| `claude-sync sync push` | Push config to Git |
+| `claude-sync sync pull` | Pull config from Git |
+| `claude-sync sync status` | Check sync status |
 
 ## Development
 
@@ -180,6 +182,10 @@ End-to-end tests that simulate real usage with local git repositories and multip
 
 See [tests/README.md](tests/README.md) for more details.
 
+## Credits
+
+claude-sync is a fork of [jean-claude](https://github.com/MikeVeerman/jean-claude), originally created by Mike Veerman. Many thanks to the original author and contributors for the foundation this project is built on.
+
 ---
 
-*Named after the famous Belgian martial artist and philosopher, because your config deserves to do the splits between profiles and machines.*
+*Originally named after the famous Belgian martial artist and philosopher, because your config deserves to do the splits between profiles and machines.*

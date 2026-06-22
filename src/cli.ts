@@ -9,7 +9,7 @@ import {
   profileCommand,
   syncCommand,
 } from './commands/index.js';
-import { JeanClaudeError } from './types/index.js';
+import { ClaudeSyncError } from './types/index.js';
 import { printLogo } from './utils/logo.js';
 
 const require = createRequire(import.meta.url);
@@ -19,7 +19,7 @@ export function createProgram(): Command {
   const program = new Command();
 
   program
-    .name('jean-claude')
+    .name('claude-sync')
     .description('Manage and sync Claude Code configuration across machines')
     .version(VERSION)
     .addHelpText('before', () => {
@@ -48,7 +48,7 @@ export async function run(argv: string[]): Promise<void> {
   try {
     await program.parseAsync(argv);
   } catch (err) {
-    if (err instanceof JeanClaudeError) {
+    if (err instanceof ClaudeSyncError) {
       console.error(chalk.red('error') + ' ' + err.message);
       if (err.suggestion) {
         console.log('\n' + chalk.dim('Suggestion: ') + err.suggestion);

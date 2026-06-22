@@ -1,17 +1,17 @@
 {
-  "name": "jean-claude",
+  "name": "claude-sync",
   "version": "2.0.0",
-  "description": "Sync Claude Code configuration across machines using Git",
-  "author": "Mike Veerman",
+  "description": "Sync Claude Code configuration across machines using Git (a fork of jean-claude by Mike Veerman)",
+  "author": "Mike Veerman (original author of jean-claude)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MikeVeerman/jean-claude"
+    "url": "https://github.com/ccarpiog/claude-sync"
   },
-  "homepage": "https://github.com/MikeVeerman/jean-claude#readme",
+  "homepage": "https://github.com/ccarpiog/claude-sync#readme",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "jean-claude": "./dist/index.js"
+    "claude-sync": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

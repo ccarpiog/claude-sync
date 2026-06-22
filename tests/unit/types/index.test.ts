@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { JeanClaudeError, ErrorCode } from '../../../src/types/index.js';
+import { ClaudeSyncError, ErrorCode } from '../../../src/types/index.js';
 
-describe('JeanClaudeError', () => {
+describe('ClaudeSyncError', () => {
   it('should create error with message and code', () => {
-    const error = new JeanClaudeError(
+    const error = new ClaudeSyncError(
       'Test error message',
       ErrorCode.NOT_INITIALIZED
     );
@@ -11,20 +11,20 @@ describe('JeanClaudeError', () => {
     expect(error.message).toBe('Test error message');
     expect(error.code).toBe(ErrorCode.NOT_INITIALIZED);
     expect(error.suggestion).toBeUndefined();
-    expect(error.name).toBe('JeanClaudeError');
+    expect(error.name).toBe('ClaudeSyncError');
     expect(error instanceof Error).toBe(true);
   });
 
   it('should create error with message, code, and suggestion', () => {
-    const error = new JeanClaudeError(
+    const error = new ClaudeSyncError(
       'Test error message',
       ErrorCode.NOT_INITIALIZED,
-      'Run jean-claude init first'
+      'Run claude-sync init first'
     );
 
     expect(error.message).toBe('Test error message');
     expect(error.code).toBe(ErrorCode.NOT_INITIALIZED);
-    expect(error.suggestion).toBe('Run jean-claude init first');
+    expect(error.suggestion).toBe('Run claude-sync init first');
   });
 
   it('should have correct error codes enum', () => {
@@ -41,12 +41,12 @@ describe('JeanClaudeError', () => {
   });
 
   it('should maintain stack trace', () => {
-    const error = new JeanClaudeError(
+    const error = new ClaudeSyncError(
       'Test error',
       ErrorCode.NOT_INITIALIZED
     );
 
     expect(error.stack).toBeDefined();
-    expect(error.stack).toContain('JeanClaudeError');
+    expect(error.stack).toContain('ClaudeSyncError');
   });
 });

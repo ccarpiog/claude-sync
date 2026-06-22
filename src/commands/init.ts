@@ -12,31 +12,31 @@ import { setupGitSync } from '../lib/sync-setup.js';
 import { printLogo } from '../utils/logo.js';
 
 export const initCommand = new Command('init')
-  .description('Initialize Jean-Claude on this machine')
+  .description('Initialize claude-sync on this machine')
   .option('--sync', 'Set up Git-based syncing without prompting')
   .option('--no-sync', 'Skip Git sync setup without prompting')
   .option('--url <repo-url>', 'Repository URL for sync setup (implies --sync)')
   .action(async (options: { sync?: boolean; url?: string }) => {
-    const { jeanClaudeDir, claudeConfigDir } = getConfigPaths();
+    const { claudeSyncDir, claudeConfigDir } = getConfigPaths();
 
     printLogo();
     logger.heading('Setup');
 
     // Check if already initialized
-    const metaPath = path.join(jeanClaudeDir, 'meta.json');
+    const metaPath = path.join(claudeSyncDir, 'meta.json');
     if (fs.existsSync(metaPath)) {
-      logger.success(`Already initialized at ${formatPath(jeanClaudeDir)}`);
-      logger.dim('Run "jean-claude sync status" to see current state.');
+      logger.success(`Already initialized at ${formatPath(claudeSyncDir)}`);
+      logger.dim('Run "claude-sync sync status" to see current state.');
       return;
     }
 
-    // Create the jean-claude directory and meta.json
-    ensureDir(jeanClaudeDir);
+    // Create the claude-sync directory and meta.json
+    ensureDir(claudeSyncDir);
     const meta = createMetaJson(claudeConfigDir);
-    await writeMetaJson(jeanClaudeDir, meta);
+    await writeMetaJson(claudeSyncDir, meta);
 
     // Check for existing git repo (partial init recovery)
-    const gitDir = path.join(jeanClaudeDir, '.git');
+    const gitDir = path.join(claudeSyncDir, '.git');
     if (fs.existsSync(gitDir)) {
       logger.info('Found existing Git repository — reusing it.');
     }
@@ -55,25 +55,25 @@ export const initCommand = new Command('init')
     }
 
     if (wantSync) {
-      await setupGitSync(jeanClaudeDir, options.url);
+      await setupGitSync(claudeSyncDir, options.url);
     }
 
     // Done
     console.log('');
-    logger.success('Jean-Claude is installed!');
+    logger.success('claude-sync is installed!');
     console.log('');
     logger.dim('Next steps:');
 
     if (wantSync) {
       logger.list([
-        'Run "jean-claude profile create <name>" to create a profile',
-        'Run "jean-claude sync push" to push your config to Git',
-        'Run "jean-claude sync pull" on other machines to sync',
+        'Run "claude-sync profile create <name>" to create a profile',
+        'Run "claude-sync sync push" to push your config to Git',
+        'Run "claude-sync sync pull" on other machines to sync',
       ]);
     } else {
       logger.list([
-        'Run "jean-claude profile create <name>" to create a profile',
-        'Run "jean-claude sync setup" to configure syncing later',
+        'Run "claude-sync profile create <name>" to create a profile',
+        'Run "claude-sync sync setup" to configure syncing later',
       ]);
     }
   });

@@ -1,6 +1,6 @@
-# Jean-Claude Tests
+# claude-sync Tests
 
-This directory contains both unit tests and integration tests for jean-claude.
+This directory contains both unit tests and integration tests for claude-sync (a fork of [jean-claude](https://github.com/MikeVeerman/jean-claude) by Mike Veerman).
 
 ## Test Structure
 
@@ -10,7 +10,7 @@ tests/
 │   ├── lib/                # Library module tests
 │   │   └── sync.test.ts    # File sync and metadata tests
 │   ├── types/              # Type definition tests
-│   │   └── index.test.ts   # JeanClaudeError tests
+│   │   └── index.test.ts   # ClaudeSyncError tests
 │   └── utils/              # Utility function tests
 │       └── logger.test.ts  # Path formatting tests
 └── README.md               # This file
@@ -57,7 +57,7 @@ npm test
 Currently tested modules:
 
 - ✅ `lib/sync.ts` - File comparison, metadata operations, sync functions
-- ✅ `types/index.ts` - JeanClaudeError class and ErrorCode enum
+- ✅ `types/index.ts` - ClaudeSyncError class and ErrorCode enum
 - ✅ `utils/logger.ts` - Path formatting utility
 
 ### Modules Not Unit Tested
@@ -125,7 +125,7 @@ test_my_feature() {
     # ...
 
     # Execute
-    run_jean_claude "$MACHINE1_DIR" command
+    run_claude_sync "$MACHINE1_DIR" command
 
     # Assert
     assert_file_exists "/path/to/file"

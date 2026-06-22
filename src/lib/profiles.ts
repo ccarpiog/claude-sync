@@ -1,8 +1,8 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { getConfigPaths, getJeanClaudeDir } from './paths.js';
-import { JeanClaudeError, ErrorCode } from '../types/index.js';
+import { getConfigPaths, getClaudeSyncDir } from './paths.js';
+import { ClaudeSyncError, ErrorCode } from '../types/index.js';
 import type { ProfileConfig, Profile } from '../types/index.js';
 
 const PROFILES_FILE = 'profiles.json';
@@ -21,7 +21,7 @@ export const SHARED_ITEMS = [
 ];
 
 function getProfilesPath(): string {
-  return path.join(getJeanClaudeDir(), PROFILES_FILE);
+  return path.join(getClaudeSyncDir(), PROFILES_FILE);
 }
 
 export async function loadProfiles(): Promise<ProfileConfig> {
@@ -57,10 +57,10 @@ export async function createProfile(
   const config = await loadProfiles();
 
   if (config.profiles[name]) {
-    throw new JeanClaudeError(
+    throw new ClaudeSyncError(
       `Profile "${name}" already exists`,
       ErrorCode.ALREADY_EXISTS,
-      `Use 'jean-claude profile list' to see existing profiles.`
+      `Use 'claude-sync profile list' to see existing profiles.`
     );
   }
 
@@ -72,7 +72,7 @@ export async function createProfile(
     await fs.mkdir(configDir, { recursive: false });
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'EEXIST') {
-      throw new JeanClaudeError(
+      throw new ClaudeSyncError(
         `Profile directory ${configDir} already exists on disk`,
         ErrorCode.ALREADY_EXISTS,
         `Remove it manually or choose a different profile name.`
@@ -149,10 +149,10 @@ export async function refreshSymlinks(name: string): Promise<string[]> {
   const profile = config.profiles[name];
 
   if (!profile) {
-    throw new JeanClaudeError(
+    throw new ClaudeSyncError(
       `Profile "${name}" not found`,
       ErrorCode.NOT_INITIALIZED,
-      `Use 'jean-claude profile list' to see existing profiles.`
+      `Use 'claude-sync profile list' to see existing profiles.`
     );
   }
 
@@ -165,10 +165,10 @@ export async function deleteProfile(name: string): Promise<Profile> {
   const profile = config.profiles[name];
 
   if (!profile) {
-    throw new JeanClaudeError(
+    throw new ClaudeSyncError(
       `Profile "${name}" not found`,
       ErrorCode.NOT_INITIALIZED,
-      `Use 'jean-claude profile list' to see existing profiles.`
+      `Use 'claude-sync profile list' to see existing profiles.`
     );
   }
 
@@ -189,7 +189,7 @@ export function getShellAliasLine(profile: Profile): string {
 }
 
 export function getShellAliasBlock(name: string, profile: Profile): string {
-  return `\n# jean-claude profile: ${name}\n${getShellAliasLine(profile)}\n`;
+  return `\n# claude-sync profile: ${name}\n${getShellAliasLine(profile)}\n`;
 }
 
 function escapeRegExp(str: string): string {
@@ -198,7 +198,7 @@ function escapeRegExp(str: string): string {
 
 function profileAliasRegex(name: string): RegExp {
   return new RegExp(
-    `\\n# jean-claude profile: ${escapeRegExp(name)}\\n[^\\n]+\\n`,
+    `\\n# claude-sync profile: ${escapeRegExp(name)}\\n[^\\n]+\\n`,
     'g'
   );
 }
@@ -214,7 +214,7 @@ export async function installShellAlias(
   // Check if alias already exists
   if (await fs.pathExists(rcPath)) {
     const content = await fs.readFile(rcPath, 'utf-8');
-    if (content.includes(`jean-claude profile: ${name}`)) {
+    if (content.includes(`claude-sync profile: ${name}`)) {
       const updated = content.replace(profileAliasRegex(name), block);
       await fs.writeFile(rcPath, updated);
       return;
@@ -236,7 +236,7 @@ export async function removeShellAlias(
   }
 
   const content = await fs.readFile(rcPath, 'utf-8');
-  if (!content.includes(`jean-claude profile: ${name}`)) {
+  if (!content.includes(`claude-sync profile: ${name}`)) {
     return false;
   }
 

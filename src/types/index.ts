@@ -1,11 +1,11 @@
-export class JeanClaudeError extends Error {
+export class ClaudeSyncError extends Error {
   constructor(
     message: string,
     public code: ErrorCode,
     public suggestion?: string
   ) {
     super(message);
-    this.name = 'JeanClaudeError';
+    this.name = 'ClaudeSyncError';
   }
 }
 
@@ -23,7 +23,7 @@ export enum ErrorCode {
 }
 
 export interface ConfigPaths {
-  jeanClaudeDir: string;
+  claudeSyncDir: string;
   claudeConfigDir: string;
   platform: 'darwin' | 'linux';
 }

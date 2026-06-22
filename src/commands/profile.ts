@@ -15,8 +15,8 @@ import {
   SHARED_ITEMS,
   type CreateProfileOptions,
 } from '../lib/profiles.js';
-import { getJeanClaudeDir } from '../lib/paths.js';
-import { JeanClaudeError, ErrorCode } from '../types/index.js';
+import { getClaudeSyncDir } from '../lib/paths.js';
+import { ClaudeSyncError, ErrorCode } from '../types/index.js';
 import fs from 'fs-extra';
 
 const profileCreateCommand = new Command('create')
@@ -29,13 +29,13 @@ const profileCreateCommand = new Command('create')
   .option('--share-claude-md', 'Share CLAUDE.md with this profile (symlink)')
   .option('--no-share-claude-md', 'Do not share CLAUDE.md with this profile')
   .action(async (nameArg: string | undefined, options: { yes?: boolean; shell?: string; shareStatusline?: boolean; shareClaudeMd?: boolean }) => {
-    // Verify jean-claude is initialized
-    const jcDir = getJeanClaudeDir();
+    // Verify claude-sync is initialized
+    const jcDir = getClaudeSyncDir();
     if (!(await fs.pathExists(jcDir))) {
-      throw new JeanClaudeError(
-        'Jean-Claude is not initialized',
+      throw new ClaudeSyncError(
+        'claude-sync is not initialized',
         ErrorCode.NOT_INITIALIZED,
-        'Run `jean-claude init` first.'
+        'Run `claude-sync init` first.'
       );
     }
 
@@ -44,7 +44,7 @@ const profileCreateCommand = new Command('create')
       nameArg || (await input('Profile name (e.g., work, personal):'));
 
     if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) {
-      throw new JeanClaudeError(
+      throw new ClaudeSyncError(
         'Invalid profile name',
         ErrorCode.INVALID_CONFIG,
         'Use lowercase letters, numbers, and hyphens. Must start with a letter.'
@@ -56,14 +56,14 @@ const profileCreateCommand = new Command('create')
     // Fail early if profile already exists (before prompting for options)
     const existingConfig = await loadProfiles();
     if (existingConfig.profiles[name]) {
-      throw new JeanClaudeError(
+      throw new ClaudeSyncError(
         `Profile "${name}" already exists`,
         ErrorCode.ALREADY_EXISTS,
-        `Use 'jean-claude profile list' to see existing profiles.`
+        `Use 'claude-sync profile list' to see existing profiles.`
       );
     }
     if (await fs.pathExists(configDir)) {
-      throw new JeanClaudeError(
+      throw new ClaudeSyncError(
         `Profile directory ${configDir} already exists on disk`,
         ErrorCode.ALREADY_EXISTS,
         `Remove it manually or choose a different profile name.`
@@ -162,7 +162,7 @@ const profileListCommand = new Command('list')
 
     if (names.length === 0) {
       logger.dim('No profiles configured.');
-      logger.dim('Create one with: jean-claude profile create <name>');
+      logger.dim('Create one with: claude-sync profile create <name>');
       return;
     }
 
@@ -231,7 +231,7 @@ const profileDeleteCommand = new Command('delete')
       ));
 
     if (!config.profiles[name]) {
-      throw new JeanClaudeError(
+      throw new ClaudeSyncError(
         `Profile "${name}" not found`,
         ErrorCode.NOT_INITIALIZED,
         `Available profiles: ${names.join(', ')}`

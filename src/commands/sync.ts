@@ -216,7 +216,7 @@ export async function handleSyncStatus(): Promise<void> {
   const isRepo = await isGitRepo(claudeSyncDir);
   const gitStatus = isRepo ? await getGitStatus(claudeSyncDir) : null;
   const meta = await readMetaJson(claudeSyncDir);
-  const fileComparison = compareFiles(claudeSyncDir, claudeConfigDir);
+  const fileComparison = await compareFiles(claudeSyncDir, claudeConfigDir);
 
   // Pretty output
   logger.heading('claude-sync Status');

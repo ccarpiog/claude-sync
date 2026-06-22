@@ -47,11 +47,11 @@ describe('sync.ts', () => {
   });
 
   describe('compareFiles', () => {
-    it('should return comparison results for all file mappings', () => {
+    it('should return comparison results for all file mappings', async () => {
       const sourceDir = path.join(tempDir, 'source');
       const targetDir = path.join(tempDir, 'target');
 
-      const results = compareFiles(sourceDir, targetDir);
+      const results = await compareFiles(sourceDir, targetDir);
 
       expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBeGreaterThan(0);
@@ -64,11 +64,11 @@ describe('sync.ts', () => {
       });
     });
 
-    it('should include a statusline.sh mapping in results', () => {
+    it('should include a statusline.sh mapping in results', async () => {
       const sourceDir = path.join(tempDir, 'source');
       const targetDir = path.join(tempDir, 'target');
 
-      const results = compareFiles(sourceDir, targetDir);
+      const results = await compareFiles(sourceDir, targetDir);
 
       const statuslineResult = results.find(r => r.mapping.source === 'statusline.sh');
       expect(statuslineResult).toBeDefined();
@@ -76,11 +76,11 @@ describe('sync.ts', () => {
       expect(statuslineResult!.mapping.type).toBe('file');
     });
 
-    it('should detect when files are missing in both locations', () => {
+    it('should detect when files are missing in both locations', async () => {
       const sourceDir = path.join(tempDir, 'source');
       const targetDir = path.join(tempDir, 'target');
 
-      const results = compareFiles(sourceDir, targetDir);
+      const results = await compareFiles(sourceDir, targetDir);
 
       // All files should be missing and considered in sync
       results.forEach(result => {
@@ -88,6 +88,40 @@ describe('sync.ts', () => {
         expect(result.targetExists).toBe(false);
         expect(result.inSync).toBe(true);
       });
+    });
+
+    it('should detect an added file inside a directory mapping (not inSync)', async () => {
+      const sourceDir = path.join(tempDir, 'source');
+      const targetDir = path.join(tempDir, 'target');
+
+      // Both sides share one file, but the source has an extra file.
+      await fs.ensureDir(path.join(sourceDir, 'commands'));
+      await fs.ensureDir(path.join(targetDir, 'commands'));
+      await fs.writeFile(path.join(sourceDir, 'commands', 'a.md'), 'a');
+      await fs.writeFile(path.join(targetDir, 'commands', 'a.md'), 'a');
+      await fs.writeFile(path.join(sourceDir, 'commands', 'b.md'), 'b');
+
+      const results = await compareFiles(sourceDir, targetDir);
+      const commandsResult = results.find(r => r.mapping.source === 'commands');
+
+      expect(commandsResult).toBeDefined();
+      expect(commandsResult!.inSync).toBe(false);
+    });
+
+    it('should report inSync:true when directory contents are identical', async () => {
+      const sourceDir = path.join(tempDir, 'source');
+      const targetDir = path.join(tempDir, 'target');
+
+      await fs.ensureDir(path.join(sourceDir, 'commands'));
+      await fs.ensureDir(path.join(targetDir, 'commands'));
+      await fs.writeFile(path.join(sourceDir, 'commands', 'a.md'), 'a');
+      await fs.writeFile(path.join(targetDir, 'commands', 'a.md'), 'a');
+
+      const results = await compareFiles(sourceDir, targetDir);
+      const commandsResult = results.find(r => r.mapping.source === 'commands');
+
+      expect(commandsResult).toBeDefined();
+      expect(commandsResult!.inSync).toBe(true);
     });
   });
 
@@ -335,6 +369,84 @@ describe('sync.ts', () => {
 
       const claudeMd = await fs.readFile(path.join(claudeDir, 'CLAUDE.md'), 'utf-8');
       expect(claudeMd).toBe('# New');
+    });
+
+    it('should delete a local file that was removed from the synced repo', async () => {
+      const claudeDir = path.join(tempDir, '.claude');
+      const claudeSyncDir = path.join(tempDir, '.claude-sync');
+
+      await fs.ensureDir(claudeDir);
+      await fs.ensureDir(claudeSyncDir);
+
+      // CLAUDE.md exists locally but NOT in the synced repo.
+      await fs.writeFile(path.join(claudeDir, 'CLAUDE.md'), '# Stale');
+
+      const results = await syncToClaudeConfig(claudeSyncDir, claudeDir);
+
+      // Local file removed, action recorded as 'deleted'.
+      expect(await fs.pathExists(path.join(claudeDir, 'CLAUDE.md'))).toBe(false);
+      const deleted = results.find(r => r.file === 'CLAUDE.md');
+      expect(deleted).toBeDefined();
+      expect(deleted!.action).toBe('deleted');
+    });
+
+    it('should mirror a directory, deleting files removed upstream', async () => {
+      const claudeDir = path.join(tempDir, '.claude');
+      const claudeSyncDir = path.join(tempDir, '.claude-sync');
+
+      await fs.ensureDir(path.join(claudeDir, 'commands'));
+      await fs.ensureDir(path.join(claudeSyncDir, 'commands'));
+
+      // Local has an extra file that no longer exists upstream.
+      await fs.writeFile(path.join(claudeDir, 'commands', 'keep.md'), 'keep');
+      await fs.writeFile(path.join(claudeDir, 'commands', 'stale.md'), 'stale');
+      await fs.writeFile(path.join(claudeSyncDir, 'commands', 'keep.md'), 'keep');
+
+      const results = await syncToClaudeConfig(claudeSyncDir, claudeDir);
+
+      expect(await fs.pathExists(path.join(claudeDir, 'commands', 'keep.md'))).toBe(true);
+      expect(await fs.pathExists(path.join(claudeDir, 'commands', 'stale.md'))).toBe(false);
+
+      // The removed file is reported as a per-file 'deleted' action.
+      const deleted = results.find(r => r.file === 'commands/stale.md');
+      expect(deleted).toBeDefined();
+      expect(deleted!.action).toBe('deleted');
+    });
+
+    it('should report a directory mirror deletion in dryRun without removing the file', async () => {
+      const claudeDir = path.join(tempDir, '.claude');
+      const claudeSyncDir = path.join(tempDir, '.claude-sync');
+
+      await fs.ensureDir(path.join(claudeDir, 'commands'));
+      await fs.ensureDir(path.join(claudeSyncDir, 'commands'));
+      await fs.writeFile(path.join(claudeDir, 'commands', 'stale.md'), 'stale');
+      await fs.writeFile(path.join(claudeSyncDir, 'commands', 'keep.md'), 'keep');
+
+      const results = await syncToClaudeConfig(claudeSyncDir, claudeDir, true);
+
+      // Deletion reported, but the stale file is left in place by the dry run.
+      const deleted = results.find(r => r.file === 'commands/stale.md');
+      expect(deleted).toBeDefined();
+      expect(deleted!.action).toBe('deleted');
+      expect(await fs.pathExists(path.join(claudeDir, 'commands', 'stale.md'))).toBe(true);
+    });
+
+    it('should record a deleted action in dryRun without removing the file', async () => {
+      const claudeDir = path.join(tempDir, '.claude');
+      const claudeSyncDir = path.join(tempDir, '.claude-sync');
+
+      await fs.ensureDir(claudeDir);
+      await fs.ensureDir(claudeSyncDir);
+
+      await fs.writeFile(path.join(claudeDir, 'CLAUDE.md'), '# Stale');
+
+      const results = await syncToClaudeConfig(claudeSyncDir, claudeDir, true);
+
+      // Action reported but the file is left untouched.
+      const deleted = results.find(r => r.file === 'CLAUDE.md');
+      expect(deleted).toBeDefined();
+      expect(deleted!.action).toBe('deleted');
+      expect(await fs.pathExists(path.join(claudeDir, 'CLAUDE.md'))).toBe(true);
     });
   });
 });

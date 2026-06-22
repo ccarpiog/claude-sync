@@ -96,6 +96,15 @@ assert_dir_exists() {
     fi
 }
 
+assert_file_not_exists() {
+    if [ ! -f "$1" ]; then
+        print_success "File absent as expected: $1"
+    else
+        print_failure "File should not exist: $1"
+        return 1
+    fi
+}
+
 assert_file_contains() {
     if grep -q "$2" "$1" 2>/dev/null; then
         print_success "File $1 contains: $2"
@@ -508,6 +517,34 @@ test_three_machine_convergence() {
     fi
 }
 
+test_deletion_convergence() {
+    print_test "deletion convergence: a file removed on M1 is removed on M2 after pull"
+
+    # Uniquely named files so this test does not collide with the state left by
+    # earlier convergence tests. Keep two files in skills/ so the directory stays
+    # non-empty after one is deleted (git does not track empty directories).
+    mkdir -p "$MACHINE1_DIR/.claude/skills"
+    echo "# Keep me" > "$MACHINE1_DIR/.claude/skills/del-keep.md"
+    echo "# Delete me" > "$MACHINE1_DIR/.claude/skills/del-target.md"
+    run_claude_sync "$MACHINE1_DIR" sync push
+
+    # M2 pulls and must first SEE the file — this proves it propagated, so the
+    # later absence assertion cannot pass trivially.
+    run_claude_sync "$MACHINE2_DIR" sync pull --force
+    assert_file_exists "$MACHINE2_DIR/.claude/skills/del-keep.md"
+    assert_file_exists "$MACHINE2_DIR/.claude/skills/del-target.md"
+
+    # M1 deletes one file (keeping the other) and pushes the deletion.
+    rm "$MACHINE1_DIR/.claude/skills/del-target.md"
+    run_claude_sync "$MACHINE1_DIR" sync push
+
+    # M2 pulls again: the deletion must propagate (the regression being guarded),
+    # while the kept file survives (directory mirror, not wipe).
+    run_claude_sync "$MACHINE2_DIR" sync pull --force
+    assert_file_exists "$MACHINE2_DIR/.claude/skills/del-keep.md"
+    assert_file_not_exists "$MACHINE2_DIR/.claude/skills/del-target.md"
+}
+
 test_three_machine_sequential_modifications() {
     print_test "sequential modifications across 3 machines"
 
@@ -889,28 +926,46 @@ test_git_status_ahead() {
 }
 
 test_concurrent_modifications() {
-    print_test "concurrent modifications on different machines"
+    print_test "concurrent modifications to different files converge"
 
-    # Machine 1 modifies CLAUDE.md
-    echo "# From Machine 1" > "$MACHINE1_DIR/.claude/CLAUDE.md"
-
-    # Machine 2 modifies settings.json
-    echo '{"from": "machine2"}' > "$MACHINE2_DIR/.claude/settings.json"
-
-    # Both push (machine 1 first)
+    # Establish a shared baseline that contains BOTH files in the synced set.
+    # Under the mirror-on-pull model a file absent upstream is intentionally
+    # removed locally, so a meaningful concurrent-edit test must start from a
+    # state where both files already exist in the repo (an earlier test removes
+    # settings.json from the repo, so we must re-seed it here).
+    echo "# Baseline" > "$MACHINE1_DIR/.claude/CLAUDE.md"
+    echo '{"baseline": true}' > "$MACHINE1_DIR/.claude/settings.json"
     run_claude_sync "$MACHINE1_DIR" sync push
     run_claude_sync "$MACHINE2_DIR" sync pull --force
+
+    # Each machine edits a DIFFERENT (already-tracked) file, then pushes. push
+    # runs `git pull --rebase` before pushing, so the two non-conflicting
+    # changes converge in the repo (M1 first, then M2 rebases on top).
+    echo "# From Machine 1" > "$MACHINE1_DIR/.claude/CLAUDE.md"
+    run_claude_sync "$MACHINE1_DIR" sync push
+
+    echo '{"from": "machine2"}' > "$MACHINE2_DIR/.claude/settings.json"
     run_claude_sync "$MACHINE2_DIR" sync push
 
-    # Machine 1 pulls
+    # Both machines pull the converged state.
     run_claude_sync "$MACHINE1_DIR" sync pull --force
+    run_claude_sync "$MACHINE2_DIR" sync pull --force
 
-    # Both machines should have both changes
-    if grep -q "From Machine 1" "$MACHINE1_DIR/.claude/CLAUDE.md" && \
-       grep -q "machine2" "$MACHINE1_DIR/.claude/settings.json"; then
-        print_success "Concurrent modifications handled correctly"
-    else
-        print_failure "Concurrent modifications not handled correctly"
+    # Both machines should end up with both changes.
+    local converged=true
+    for machine_dir in "$MACHINE1_DIR" "$MACHINE2_DIR"; do
+        if ! grep -q "From Machine 1" "$machine_dir/.claude/CLAUDE.md"; then
+            print_failure "Missing M1's CLAUDE.md change on $machine_dir"
+            converged=false
+        fi
+        if ! grep -q "machine2" "$machine_dir/.claude/settings.json"; then
+            print_failure "Missing M2's settings.json change on $machine_dir"
+            converged=false
+        fi
+    done # End of the per-machine convergence check
+
+    if [ "$converged" = true ]; then
+        print_success "Concurrent modifications to different files converged"
     fi
 }
 
@@ -1930,6 +1985,7 @@ run_all_tests() {
     test_three_machine_init
     test_three_machine_chain_sync
     test_three_machine_convergence
+    test_deletion_convergence
     test_three_machine_sequential_modifications
     test_three_machine_concurrent_different_files
     test_three_machine_hooks_sync

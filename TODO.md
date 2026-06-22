@@ -65,5 +65,35 @@ sides existed, regardless of contents.
       reports `inSync` for identical contents.
 - [x] A dry-run pull records `deleted` actions (file + directory mirror) without
       touching the filesystem.
-- [ ] Round-trip convergence: delete on machine A, push, pull on machine B,
-      assert B no longer has the entry (extend `test-integration.sh`).
+- [x] Round-trip convergence: delete on machine A, push, pull on machine B,
+      assert B no longer has the entry. Added `test_deletion_convergence` (plus
+      an `assert_file_not_exists` helper) to `test-integration.sh`. It keeps a
+      second file in `skills/` so the dir stays non-empty (git ignores empty
+      dirs) and asserts the deleted file is present on M2 *before* deletion so
+      the absence check can't pass trivially.
+
+### Test fallout fixed by the convergence change
+
+- [x] `test_concurrent_modifications` in `test-integration.sh` was passing only
+      because of the old skip-on-missing bug: it relied on an un-pushed local
+      `settings.json` surviving a `sync pull --force`. Under mirror-on-pull that
+      local-only file is correctly deleted. Rewrote the test to validate genuine
+      convergence (shared baseline → divergent edits to different files → push
+      each, relying on push's `git pull --rebase` to merge → pull → assert both
+      edits present on both machines). The `sync.ts` fix was **not** weakened.
+
+## Follow-up: warn before pull deletes local-only files (safety)
+
+Surfaced by Codex while reviewing the convergence change. `sync pull` now
+mirrors the repo onto `~/.claude`, so a file that exists locally but was **never
+pushed** is permanently deleted on pull. The existing pull confirmation prompt
+(`src/commands/sync.ts` ~line 152) only warns about the **sync repo's** dirty
+git state — it does not mention local-only files under `~/.claude` that the
+mirror will remove.
+
+- [ ] Before applying the mirror, compute the set of local-only files that would
+      be deleted (run `syncToClaudeConfig` with `dryRun` and collect `deleted`
+      results) and, when not `--force`, show a count + representative paths and
+      require confirmation.
+- [ ] At minimum, update the prompt copy to state that un-pushed files under
+      `~/.claude` may be permanently deleted.

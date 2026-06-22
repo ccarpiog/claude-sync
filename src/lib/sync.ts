@@ -32,6 +32,11 @@ export const FILE_MAPPINGS: FileMapping[] = [
     type: 'directory',
   },
   {
+    source: 'commands',
+    target: 'commands',
+    type: 'directory',
+  },
+  {
     source: 'keybindings.json',
     target: 'keybindings.json',
     type: 'file',
@@ -39,6 +44,25 @@ export const FILE_MAPPINGS: FileMapping[] = [
   {
     source: 'statusline.sh',
     target: 'statusline.sh',
+    type: 'file',
+  },
+  // Plugin manifests only — these describe which plugins are installed and which
+  // marketplaces are configured, so a new machine knows what to reinstall. The
+  // cloned marketplace repos and caches under plugins/ are machine-local and
+  // intentionally not synced.
+  {
+    source: 'plugins/config.json',
+    target: 'plugins/config.json',
+    type: 'file',
+  },
+  {
+    source: 'plugins/installed_plugins.json',
+    target: 'plugins/installed_plugins.json',
+    type: 'file',
+  },
+  {
+    source: 'plugins/known_marketplaces.json',
+    target: 'plugins/known_marketplaces.json',
     type: 'file',
   },
 ];

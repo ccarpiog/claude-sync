@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import {
+  FILE_MAPPINGS,
   compareFiles,
   createMetaJson,
   readMetaJson,
@@ -27,6 +28,22 @@ describe('sync.ts', () => {
   afterEach(async () => {
     // Clean up
     await fs.remove(tempDir);
+  });
+
+  describe('FILE_MAPPINGS', () => {
+    const sources = FILE_MAPPINGS.map(m => m.source);
+
+    it('syncs custom slash commands', () => {
+      expect(sources).toContain('commands');
+    });
+
+    it('syncs plugin manifests but not the cloned repos/caches', () => {
+      expect(sources).toContain('plugins/config.json');
+      expect(sources).toContain('plugins/installed_plugins.json');
+      expect(sources).toContain('plugins/known_marketplaces.json');
+      // The whole plugins/ directory must NOT be synced — only its manifests.
+      expect(sources).not.toContain('plugins');
+    });
   });
 
   describe('compareFiles', () => {

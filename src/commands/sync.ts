@@ -78,15 +78,24 @@ export async function handleSyncPush(): Promise<void> {
     return;
   }
 
+  // There are changes to push. Record the sync time *before* committing so the
+  // refreshed meta.json is part of this commit instead of being left behind as
+  // an uncommitted change — otherwise the repo stays perpetually "dirty" (the
+  // lastSync bump from one push only lands in the next push's commit).
+  await updateLastSync(claudeSyncDir);
+
+  // Re-read status so the freshly-bumped meta.json appears in the change list.
+  const pushStatus = await getGitStatus(claudeSyncDir);
+
   // Show changes
   logger.dim('Changes to push:');
-  if (gitStatus.modified.length > 0) {
-    gitStatus.modified.forEach((f) => {
+  if (pushStatus.modified.length > 0) {
+    pushStatus.modified.forEach((f) => {
       console.log(`  ${chalk.yellow('modified')}  ${f}`);
     });
   }
-  if (gitStatus.untracked.length > 0) {
-    gitStatus.untracked.forEach((f) => {
+  if (pushStatus.untracked.length > 0) {
+    pushStatus.untracked.forEach((f) => {
       console.log(`  ${chalk.green('new file')}  ${f}`);
     });
   }
@@ -98,9 +107,6 @@ export async function handleSyncPush(): Promise<void> {
   logger.step(2, 2, 'Committing and pushing...');
 
   const result = await commitAndPush(claudeSyncDir, commitMessage, true);
-
-  // Update last sync
-  await updateLastSync(claudeSyncDir);
 
   // Summary
   console.log('');

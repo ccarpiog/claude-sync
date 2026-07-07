@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import { syncCommand, handleSyncPull } from '../../../src/commands/sync.js';
+import { syncCommand, handleSyncPull, handleSyncPush } from '../../../src/commands/sync.js';
 import { initCommand } from '../../../src/commands/init.js';
 import { pullCommand } from '../../../src/commands/pull.js';
 import { pushCommand } from '../../../src/commands/push.js';
@@ -243,5 +243,75 @@ describe('sync pull deletes-local-files warning', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('looks empty')
     );
+  });
+});
+
+describe('sync push — meta.json committed inline (clean working tree)', () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-sync-test-'));
+    const claudeSyncDir = path.join(tempDir, '.claude-sync');
+    await fs.ensureDir(claudeSyncDir);
+
+    vi.spyOn(paths, 'getConfigPaths').mockReturnValue({
+      claudeSyncDir,
+      claudeConfigDir: path.join(tempDir, '.claude'),
+      platform: 'linux',
+    });
+
+    vi.spyOn(git, 'isGitRepo').mockResolvedValue(true);
+    vi.spyOn(sync, 'syncFromClaudeConfig').mockResolvedValue([]);
+    vi.spyOn(sync, 'updateLastSync').mockResolvedValue(undefined);
+    vi.spyOn(git, 'commitAndPush').mockResolvedValue({
+      committed: true,
+      pushed: true,
+    });
+    // Not clean, so the push proceeds; the flow calls getGitStatus twice
+    // (once for the clean check, once after bumping meta.json for display).
+    vi.spyOn(git, 'getGitStatus').mockResolvedValue({
+      branch: 'main',
+      remote: 'origin',
+      isClean: false,
+      modified: ['meta.json'],
+      untracked: [],
+      ahead: 0,
+      behind: 0,
+    });
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await fs.remove(tempDir);
+  });
+
+  it('bumps lastSync BEFORE committing so meta.json lands in the same commit', async () => {
+    await handleSyncPush();
+
+    // Both ran...
+    expect(sync.updateLastSync).toHaveBeenCalledTimes(1);
+    expect(git.commitAndPush).toHaveBeenCalledTimes(1);
+    // ...and the timestamp bump happened before the commit, so the refreshed
+    // meta.json is part of the commit rather than left as an uncommitted change.
+    const bumpOrder = vi.mocked(sync.updateLastSync).mock.invocationCallOrder[0];
+    const commitOrder = vi.mocked(git.commitAndPush).mock.invocationCallOrder[0];
+    expect(bumpOrder).toBeLessThan(commitOrder);
+  });
+
+  it('does not bump lastSync when there is nothing to push', async () => {
+    vi.mocked(git.getGitStatus).mockResolvedValue({
+      branch: 'main',
+      remote: 'origin',
+      isClean: true,
+      modified: [],
+      untracked: [],
+      ahead: 0,
+      behind: 0,
+    });
+
+    await handleSyncPush();
+
+    expect(sync.updateLastSync).not.toHaveBeenCalled();
+    expect(git.commitAndPush).not.toHaveBeenCalled();
   });
 });

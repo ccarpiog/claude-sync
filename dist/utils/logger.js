@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { contractPath } from '../lib/paths.js';
 const orange = chalk.hex('#FF6B4A');
 export const logger = {
     info: (msg) => console.log(chalk.blue('info') + ' ' + msg),
@@ -39,10 +40,6 @@ export const logger = {
     },
 };
 export function formatPath(p) {
-    const home = process.env.HOME || '';
-    if (home && p.startsWith(home)) {
-        return '~' + p.slice(home.length);
-    }
-    return p;
+    return contractPath(p);
 }
 //# sourceMappingURL=logger.js.map

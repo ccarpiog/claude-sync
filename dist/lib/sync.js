@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
-import { getConfigPaths } from './paths.js';
+import { getConfigPaths, expandPath, contractPath } from './paths.js';
 export const FILE_MAPPINGS = [
     {
         source: 'CLAUDE.md',
@@ -333,7 +333,9 @@ export async function readMetaJson(claudeSyncDir) {
         return null;
     }
     try {
-        return await fs.readJson(metaPath);
+        const meta = await fs.readJson(metaPath);
+        meta.claudeConfigPath = expandPath(meta.claudeConfigPath);
+        return meta;
     }
     catch {
         return null;
@@ -341,7 +343,9 @@ export async function readMetaJson(claudeSyncDir) {
 }
 export async function writeMetaJson(claudeSyncDir, meta) {
     const metaPath = path.join(claudeSyncDir, 'meta.json');
-    await fs.writeJson(metaPath, meta, { spaces: 2 });
+    // Store the path with ~ so meta.json stays portable across machines
+    const portableMeta = { ...meta, claudeConfigPath: contractPath(meta.claudeConfigPath) };
+    await fs.writeJson(metaPath, portableMeta, { spaces: 2 });
 }
 export async function updateLastSync(claudeSyncDir) {
     const meta = await readMetaJson(claudeSyncDir);

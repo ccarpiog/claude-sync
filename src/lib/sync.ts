@@ -46,6 +46,11 @@ export const FILE_MAPPINGS: FileMapping[] = [
     target: 'statusline.sh',
     type: 'file',
   },
+  {
+    source: 'scripts',
+    target: 'scripts',
+    type: 'directory',
+  },
   // Plugin manifests only — these describe which plugins are installed and which
   // marketplaces are configured, so a new machine knows what to reinstall. The
   // cloned marketplace repos and caches under plugins/ are machine-local and

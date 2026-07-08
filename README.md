@@ -119,6 +119,7 @@ Your main `~/.claude/` stays the source of truth. Profile directories (`~/.claud
 | `agents/`                 |                            |                        |
 | `skills/`                 |                            |                        |
 | `commands/`               |                            |                        |
+| `scripts/`                |                            |                        |
 | `plugins/`                |                            |                        |
 | `keybindings.json`        |                            |                        |
 
@@ -150,6 +151,7 @@ Syncing is optional and uses Git to keep your configuration in sync across machi
 - `commands/` — Your custom slash commands
 - `keybindings.json` — Your keyboard shortcuts
 - `statusline.sh` — Your statusline configuration
+- `scripts/` — Your personal helper scripts
 - `plugins/` manifests — `config.json`, `installed_plugins.json`, and `known_marketplaces.json` only (so a new machine knows what to reinstall; the cloned marketplace repos and caches stay machine-local)
 - Profile definitions — So profiles carry over to other machines
 

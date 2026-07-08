@@ -14,6 +14,7 @@ export const SHARED_ITEMS = [
     { name: 'agents', type: 'directory' },
     { name: 'skills', type: 'directory' },
     { name: 'commands', type: 'directory' },
+    { name: 'scripts', type: 'directory' },
     { name: 'plugins', type: 'directory' },
     { name: 'keybindings.json', type: 'file' },
 ];

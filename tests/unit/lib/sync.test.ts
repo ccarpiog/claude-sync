@@ -37,6 +37,10 @@ describe('sync.ts', () => {
       expect(sources).toContain('commands');
     });
 
+    it('syncs the scripts directory', () => {
+      expect(sources).toContain('scripts');
+    });
+
     it('syncs plugin manifests but not the cloned repos/caches', () => {
       expect(sources).toContain('plugins/config.json');
       expect(sources).toContain('plugins/installed_plugins.json');
@@ -279,6 +283,35 @@ describe('sync.ts', () => {
       expect(statuslineResult).toBeDefined();
     });
 
+    it('should copy scripts/codex-wait.sh from Claude config', async () => {
+      const claudeDir = path.join(tempDir, '.claude');
+      const claudeSyncDir = path.join(tempDir, '.claude-sync');
+
+      await fs.ensureDir(path.join(claudeDir, 'scripts'));
+      await fs.ensureDir(claudeSyncDir);
+
+      await fs.writeFile(
+        path.join(claudeDir, 'scripts', 'codex-wait.sh'),
+        '#!/bin/bash\necho "wait"'
+      );
+
+      const results = await syncFromClaudeConfig(claudeDir, claudeSyncDir);
+
+      expect(
+        await fs.pathExists(path.join(claudeSyncDir, 'scripts', 'codex-wait.sh'))
+      ).toBe(true);
+      const content = await fs.readFile(
+        path.join(claudeSyncDir, 'scripts', 'codex-wait.sh'),
+        'utf-8'
+      );
+      expect(content).toBe('#!/bin/bash\necho "wait"');
+
+      // scripts is a directory mapping, so on push its SyncResult is reported at
+      // the directory level (file === 'scripts'), not per-file like statusline.sh.
+      const scriptsResult = results.find(r => r.file === 'scripts');
+      expect(scriptsResult).toBeDefined();
+    });
+
     it('should sync hooks directory', async () => {
       const claudeDir = path.join(tempDir, '.claude');
       const claudeSyncDir = path.join(tempDir, '.claude-sync');
@@ -386,6 +419,36 @@ describe('sync.ts', () => {
 
       const statuslineResult = results.find(r => r.file === 'statusline.sh');
       expect(statuslineResult).toBeDefined();
+    });
+
+    it('should copy scripts/codex-wait.sh to Claude config', async () => {
+      const claudeDir = path.join(tempDir, '.claude');
+      const claudeSyncDir = path.join(tempDir, '.claude-sync');
+
+      await fs.ensureDir(claudeDir);
+      await fs.ensureDir(path.join(claudeSyncDir, 'scripts'));
+
+      await fs.writeFile(
+        path.join(claudeSyncDir, 'scripts', 'codex-wait.sh'),
+        '#!/bin/bash\necho "wait"'
+      );
+
+      const results = await syncToClaudeConfig(claudeSyncDir, claudeDir);
+
+      expect(
+        await fs.pathExists(path.join(claudeDir, 'scripts', 'codex-wait.sh'))
+      ).toBe(true);
+      const content = await fs.readFile(
+        path.join(claudeDir, 'scripts', 'codex-wait.sh'),
+        'utf-8'
+      );
+      expect(content).toBe('#!/bin/bash\necho "wait"');
+
+      // On pull a directory mapping reports per-file results, so the created file
+      // is keyed as 'scripts/codex-wait.sh' (contrast the single-file statusline.sh).
+      const scriptResult = results.find(r => r.file === 'scripts/codex-wait.sh');
+      expect(scriptResult).toBeDefined();
+      expect(scriptResult!.action).toBe('created');
     });
 
     it('should overwrite existing files', async () => {

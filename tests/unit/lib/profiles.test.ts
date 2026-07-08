@@ -178,6 +178,36 @@ describe('profiles.ts', () => {
       );
       expect(statuslineStat.isSymbolicLink()).toBe(true);
     });
+
+    it('should symlink the scripts/ directory into the profile', async () => {
+      // scripts/ is in SHARED_ITEMS, so createProfile symlinks it from the main
+      // config automatically (no sharing option needed, unlike statusline.sh).
+      const mainScripts = path.join(claudeConfigDir, 'scripts');
+      await fs.ensureDir(mainScripts);
+      await fs.writeFile(
+        path.join(mainScripts, 'codex-wait.sh'),
+        '#!/bin/bash\necho "wait"'
+      );
+
+      const profile = await createProfile('test-scripts');
+      const scriptsPath = path.join(profile.configDir, 'scripts');
+
+      expect(await fs.pathExists(scriptsPath)).toBe(true);
+
+      // Should be a symlink pointing at the main config's scripts/ directory.
+      const stat = await fs.lstat(scriptsPath);
+      expect(stat.isSymbolicLink()).toBe(true);
+
+      const target = await fs.readlink(scriptsPath);
+      expect(target).toBe(mainScripts);
+
+      // The symlink resolves through to the shared script file.
+      const content = await fs.readFile(
+        path.join(scriptsPath, 'codex-wait.sh'),
+        'utf-8'
+      );
+      expect(content).toBe('#!/bin/bash\necho "wait"');
+    });
   });
 
   describe('createProfile — atomic directory creation [2]', () => {

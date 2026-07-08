@@ -1618,6 +1618,34 @@ test_statusline_sync() {
     fi
 }
 
+# Test scripts directory sync
+test_scripts_sync() {
+    print_test "scripts directory push and pull"
+
+    # Keep the directory non-empty so git tracks it (empty dirs are ignored).
+    mkdir -p "$MACHINE1_DIR/.claude/scripts"
+    cat > "$MACHINE1_DIR/.claude/scripts/codex-wait.sh" << 'SCRIPTS'
+#!/bin/bash
+# Codex watchdog wait script
+echo "waiting for codex job"
+SCRIPTS
+
+    run_claude_sync "$MACHINE1_DIR" sync push
+
+    assert_file_exists "$MACHINE1_DIR/.claude/.claude-sync/scripts/codex-wait.sh"
+    assert_file_contains "$MACHINE1_DIR/.claude/.claude-sync/scripts/codex-wait.sh" "Codex watchdog wait script"
+
+    run_claude_sync "$MACHINE2_DIR" sync pull --force
+
+    assert_file_exists "$MACHINE2_DIR/.claude/scripts/codex-wait.sh"
+
+    if grep -q "Codex watchdog wait script" "$MACHINE2_DIR/.claude/scripts/codex-wait.sh"; then
+        print_success "scripts/codex-wait.sh content synced correctly"
+    else
+        print_failure "scripts/codex-wait.sh content not synced"
+    fi
+}
+
 # Test agents directory direct push/pull
 test_agents_direct_sync() {
     print_test "agents directory direct push and pull"
@@ -2027,6 +2055,9 @@ run_all_tests() {
 
     print_header "Testing statusline.sh sync"
     test_statusline_sync
+
+    print_header "Testing scripts directory sync"
+    test_scripts_sync
 
     print_header "Testing agents directory sync"
     test_agents_direct_sync

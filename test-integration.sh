@@ -990,25 +990,18 @@ test_metadata_persistence() {
     fi
 }
 
-test_last_sync_timestamp() {
-    print_test "last sync timestamp updates"
+test_last_sync_timestamp_removed() {
+    print_test "legacy lastSync timestamp is removed"
 
-    # Check initial timestamp
-    initial_sync=$(grep -o '"lastSync":"[^"]*"' "$MACHINE1_DIR/.claude/.claude-sync/meta.json" | cut -d'"' -f4 || echo "null")
-
-    # Sleep briefly
-    sleep 1
-
-    # Run pull to update timestamp
+    # The test remote starts with legacy metadata. A push should migrate it and
+    # no later push or pull should recreate the timestamp.
+    run_claude_sync "$MACHINE1_DIR" sync push
     run_claude_sync "$MACHINE1_DIR" sync pull --force
 
-    # Check updated timestamp
-    updated_sync=$(grep -o '"lastSync":"[^"]*"' "$MACHINE1_DIR/.claude/.claude-sync/meta.json" | cut -d'"' -f4)
-
-    if [ "$initial_sync" != "$updated_sync" ]; then
-        print_success "Last sync timestamp updated"
+    if grep -q '"lastSync"' "$MACHINE1_DIR/.claude/.claude-sync/meta.json"; then
+        print_failure "Legacy lastSync timestamp still present"
     else
-        print_info "Timestamp check (may not change if no updates)"
+        print_success "Legacy lastSync timestamp removed"
     fi
 }
 
@@ -2096,7 +2089,7 @@ run_all_tests() {
 
     print_header "Testing metadata"
     test_metadata_persistence
-    test_last_sync_timestamp
+    test_last_sync_timestamp_removed
     test_meta_json_fields
     test_meta_json_managed_by
     test_meta_json_persists_across_push_pull

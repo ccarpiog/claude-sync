@@ -161,7 +161,7 @@ create_test_env() {
             git init > /dev/null 2>&1
             git config user.email "test@example.com"
             git config user.name "Test User"
-            echo '{"version":"2.0.0","managedBy":"claude-sync","lastSync":null,"machineId":"test","platform":"linux","claudeConfigPath":"/test"}' > meta.json
+            echo '{"version":"2.0.0","managedBy":"claude-sync","machineId":"test","platform":"linux","claudeConfigPath":"/test"}' > meta.json
             git add meta.json
             git commit -m "Initial commit" > /dev/null 2>&1
         )
@@ -280,10 +280,8 @@ test_ticket_22_push_auto_rebases_on_divergence() {
     # The scenario: two machines push independently without pulling each other's
     # changes first. The expected behavior is:
     #   1. pull --rebase runs automatically before push
-    #   2. meta.json will always conflict (different timestamps/machineIds) but
-    #      since it's machine-generated metadata, it should be auto-resolved
-    #   3. Non-conflicting user files (different skill files) should rebase cleanly
-    #   4. The push should succeed and both machines should converge
+    #   2. Non-conflicting user files (different skill files) should rebase cleanly
+    #   3. The push should succeed and both machines should converge
 
     # 1. Create isolated environment
     create_test_env "ticket22" true
@@ -306,8 +304,7 @@ test_ticket_22_push_auto_rebases_on_divergence() {
     assert_file_exists "$TICKET_M1/.claude/.claude-sync/skills/m1-skill.md"
 
     # 5. m2 creates a DIFFERENT file and pushes WITHOUT pulling m1's change first
-    #    This will cause divergent history. meta.json will conflict (different
-    #    timestamps) but should be auto-resolved. The skill files don't conflict.
+    #    This will cause divergent history, but the skill files don't conflict.
     print_test "#22 - Machine 2 pushes a different skill file (divergent)"
     mkdir -p "$TICKET_M2/.claude/skills"
     echo "skill from m2" > "$TICKET_M2/.claude/skills/m2-skill.md"
@@ -319,8 +316,8 @@ test_ticket_22_push_auto_rebases_on_divergence() {
     print_info "Push output (last 5 lines):"
     echo "$output" | tail -5 | while read -r line; do print_info "  $line"; done
 
-    # 6. Assert: push succeeded — meta.json conflict was auto-resolved
-    print_test "#22 - Push succeeds with auto-rebase (meta.json conflict auto-resolved)"
+    # 6. Assert: push succeeded after auto-rebase
+    print_test "#22 - Push succeeds with auto-rebase"
     if [ "$exit_code" -eq 0 ]; then
         print_success "Push exit code is 0"
     else

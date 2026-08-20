@@ -9,7 +9,7 @@ import {
   createMetaJson,
   readMetaJson,
   writeMetaJson,
-  updateLastSync,
+  removeLegacyLastSync,
   syncFromClaudeConfig,
   syncToClaudeConfig,
 } from '../../../src/lib/sync.js';
@@ -136,13 +136,12 @@ describe('sync.ts', () => {
         const meta = createMetaJson(claudeConfigPath);
 
         expect(meta).toHaveProperty('version');
-        expect(meta).toHaveProperty('lastSync');
         expect(meta).toHaveProperty('machineId');
         expect(meta).toHaveProperty('platform');
         expect(meta).toHaveProperty('claudeConfigPath');
 
         expect(meta.version).toBe('1.1.0');
-        expect(meta.lastSync).toBeNull();
+        expect(meta).not.toHaveProperty('lastSync');
         expect(meta.claudeConfigPath).toBe(claudeConfigPath);
         expect(meta.machineId).toContain('-'); // Format: hostname-hash
         expect(['linux', 'darwin']).toContain(meta.platform);
@@ -221,22 +220,22 @@ describe('sync.ts', () => {
       });
     });
 
-    describe('updateLastSync', () => {
-      it('should update the lastSync timestamp', async () => {
-        const meta = createMetaJson('/test/path');
+    describe('removeLegacyLastSync', () => {
+      it('should remove a legacy lastSync field without changing other metadata', async () => {
+        const meta = {
+          ...createMetaJson('/test/path'),
+          lastSync: '2026-08-20T10:50:48.790Z',
+        };
         const claudeSyncDir = path.join(tempDir, '.claude-sync');
         await fs.ensureDir(claudeSyncDir);
         await writeMetaJson(claudeSyncDir, meta);
 
-        expect(meta.lastSync).toBeNull();
+        expect(await removeLegacyLastSync(claudeSyncDir)).toBe(true);
 
-        await updateLastSync(claudeSyncDir);
-
-        const updatedMeta = await readMetaJson(claudeSyncDir);
-        expect(updatedMeta?.lastSync).not.toBeNull();
-        if (updatedMeta?.lastSync) {
-          expect(new Date(updatedMeta.lastSync).getTime()).toBeGreaterThan(0);
-        }
+        const raw = await fs.readJson(path.join(claudeSyncDir, 'meta.json'));
+        expect(raw).not.toHaveProperty('lastSync');
+        expect(raw.machineId).toBe(meta.machineId);
+        expect(await removeLegacyLastSync(claudeSyncDir)).toBe(false);
       });
     });
   });

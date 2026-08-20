@@ -187,7 +187,6 @@ describe('sync pull deletes-local-files warning', () => {
     vi.spyOn(git, 'cleanUntracked').mockResolvedValue(undefined);
     vi.spyOn(git, 'pull').mockResolvedValue({ success: true, message: 'Pulled' });
     vi.spyOn(git, 'hasMergeConflicts').mockResolvedValue(false);
-    vi.spyOn(sync, 'updateLastSync').mockResolvedValue(undefined);
 
     // The mirror would delete one local file (absent from the synced repo).
     vi.spyOn(sync, 'syncToClaudeConfig').mockResolvedValue([
@@ -210,15 +209,13 @@ describe('sync pull deletes-local-files warning', () => {
       'Delete these local files and apply?',
       false
     );
-    // ...and aborted before the real apply: only the dry-run preview ran, and
-    // the last-sync timestamp was not updated.
+    // ...and aborted before the real apply: only the dry-run preview ran.
     expect(sync.syncToClaudeConfig).toHaveBeenCalledTimes(1);
     expect(sync.syncToClaudeConfig).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
       true
     );
-    expect(sync.updateLastSync).not.toHaveBeenCalled();
   });
 
   it('skips the prompt and applies when --force is used', async () => {
@@ -229,7 +226,6 @@ describe('sync pull deletes-local-files warning', () => {
     // No prompt under --force, but the apply still runs (preview + real).
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(sync.syncToClaudeConfig).toHaveBeenCalledTimes(2);
-    expect(sync.updateLastSync).toHaveBeenCalled();
   });
 
   it('hints to push when the synced repo looks empty (only deletions)', async () => {
@@ -246,7 +242,7 @@ describe('sync pull deletes-local-files warning', () => {
   });
 });
 
-describe('sync push — meta.json committed inline (clean working tree)', () => {
+describe('sync push — legacy lastSync migration', () => {
   let tempDir: string;
 
   beforeEach(async () => {
@@ -262,13 +258,11 @@ describe('sync push — meta.json committed inline (clean working tree)', () => 
 
     vi.spyOn(git, 'isGitRepo').mockResolvedValue(true);
     vi.spyOn(sync, 'syncFromClaudeConfig').mockResolvedValue([]);
-    vi.spyOn(sync, 'updateLastSync').mockResolvedValue(undefined);
+    vi.spyOn(sync, 'removeLegacyLastSync').mockResolvedValue(true);
     vi.spyOn(git, 'commitAndPush').mockResolvedValue({
       committed: true,
       pushed: true,
     });
-    // Not clean, so the push proceeds; the flow calls getGitStatus twice
-    // (once for the clean check, once after bumping meta.json for display).
     vi.spyOn(git, 'getGitStatus').mockResolvedValue({
       branch: 'main',
       remote: 'origin',
@@ -285,20 +279,17 @@ describe('sync push — meta.json committed inline (clean working tree)', () => 
     await fs.remove(tempDir);
   });
 
-  it('bumps lastSync BEFORE committing so meta.json lands in the same commit', async () => {
+  it('removes legacy lastSync before checking for changes and committing', async () => {
     await handleSyncPush();
 
-    // Both ran...
-    expect(sync.updateLastSync).toHaveBeenCalledTimes(1);
+    expect(sync.removeLegacyLastSync).toHaveBeenCalledTimes(1);
     expect(git.commitAndPush).toHaveBeenCalledTimes(1);
-    // ...and the timestamp bump happened before the commit, so the refreshed
-    // meta.json is part of the commit rather than left as an uncommitted change.
-    const bumpOrder = vi.mocked(sync.updateLastSync).mock.invocationCallOrder[0];
-    const commitOrder = vi.mocked(git.commitAndPush).mock.invocationCallOrder[0];
-    expect(bumpOrder).toBeLessThan(commitOrder);
+    const cleanupOrder = vi.mocked(sync.removeLegacyLastSync).mock.invocationCallOrder[0];
+    const statusOrder = vi.mocked(git.getGitStatus).mock.invocationCallOrder[0];
+    expect(cleanupOrder).toBeLessThan(statusOrder);
   });
 
-  it('does not bump lastSync when there is nothing to push', async () => {
+  it('does not commit when metadata and config are already clean', async () => {
     vi.mocked(git.getGitStatus).mockResolvedValue({
       branch: 'main',
       remote: 'origin',
@@ -311,7 +302,7 @@ describe('sync push — meta.json committed inline (clean working tree)', () => 
 
     await handleSyncPush();
 
-    expect(sync.updateLastSync).not.toHaveBeenCalled();
+    expect(sync.removeLegacyLastSync).toHaveBeenCalledTimes(1);
     expect(git.commitAndPush).not.toHaveBeenCalled();
   });
 });

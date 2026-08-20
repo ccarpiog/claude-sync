@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import { logger, formatPath } from '../utils/logger.js';
 import { getConfigPaths } from '../lib/paths.js';
 import { isGitRepo, getGitStatus, commitAndPush, pull, hasMergeConflicts, resetHard, cleanUntracked } from '../lib/git.js';
-import { syncFromClaudeConfig, syncToClaudeConfig, updateLastSync, compareFiles, readMetaJson } from '../lib/sync.js';
+import { syncFromClaudeConfig, syncToClaudeConfig, removeLegacyLastSync, compareFiles, readMetaJson } from '../lib/sync.js';
 import { setupGitSync } from '../lib/sync-setup.js';
 import { confirm } from '../utils/prompts.js';
 import { ClaudeSyncError, ErrorCode } from '../types/index.js';
@@ -70,6 +70,11 @@ export async function handleSyncPush(): Promise<void> {
     });
   }
 
+  // Remove the obsolete per-machine timestamp before checking status. This is
+  // a one-time migration for existing repositories and prevents metadata-only
+  // churn and cross-machine conflicts on future pushes.
+  await removeLegacyLastSync(claudeSyncDir);
+
   // Step 2: Check git status
   const gitStatus = await getGitStatus(claudeSyncDir);
 
@@ -78,24 +83,15 @@ export async function handleSyncPush(): Promise<void> {
     return;
   }
 
-  // There are changes to push. Record the sync time *before* committing so the
-  // refreshed meta.json is part of this commit instead of being left behind as
-  // an uncommitted change — otherwise the repo stays perpetually "dirty" (the
-  // lastSync bump from one push only lands in the next push's commit).
-  await updateLastSync(claudeSyncDir);
-
-  // Re-read status so the freshly-bumped meta.json appears in the change list.
-  const pushStatus = await getGitStatus(claudeSyncDir);
-
   // Show changes
   logger.dim('Changes to push:');
-  if (pushStatus.modified.length > 0) {
-    pushStatus.modified.forEach((f) => {
+  if (gitStatus.modified.length > 0) {
+    gitStatus.modified.forEach((f) => {
       console.log(`  ${chalk.yellow('modified')}  ${f}`);
     });
   }
-  if (pushStatus.untracked.length > 0) {
-    pushStatus.untracked.forEach((f) => {
+  if (gitStatus.untracked.length > 0) {
+    gitStatus.untracked.forEach((f) => {
       console.log(`  ${chalk.green('new file')}  ${f}`);
     });
   }
@@ -227,9 +223,6 @@ export async function handleSyncPull(options: { force?: boolean } = {}): Promise
   const results = await syncToClaudeConfig(claudeSyncDir, claudeConfigDir);
   const applied = results.filter((r) => r.action !== 'skipped');
 
-  // Update last sync time
-  await updateLastSync(claudeSyncDir);
-
   // Summary
   console.log('');
   logger.success(`Applied ${applied.length} file(s)`);
@@ -327,11 +320,6 @@ export async function handleSyncStatus(): Promise<void> {
     );
   });
 
-  // Last sync
-  if (meta?.lastSync) {
-    console.log('');
-    logger.dim(`Last sync: ${new Date(meta.lastSync).toLocaleString()}`);
-  }
 }
 
 const syncStatusCommand = new Command('status')

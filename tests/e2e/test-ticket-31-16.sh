@@ -121,7 +121,7 @@ create_test_env() {
             git init > /dev/null 2>&1
             git config user.email "test@example.com"
             git config user.name "Test User"
-            echo '{"version":"2.0.0","managedBy":"claude-sync","lastSync":null,"machineId":"test","platform":"linux","claudeConfigPath":"/test"}' > meta.json
+            echo '{"version":"2.0.0","managedBy":"claude-sync","machineId":"test","platform":"linux","claudeConfigPath":"/test"}' > meta.json
             git add meta.json
             git commit -m "Initial commit" > /dev/null 2>&1
         )

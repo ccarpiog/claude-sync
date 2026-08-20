@@ -12,5 +12,5 @@ export declare function syncFromClaudeConfig(claudeConfigDir: string, claudeSync
 export declare function createMetaJson(claudeConfigPath: string): MetaJson;
 export declare function readMetaJson(claudeSyncDir: string): Promise<MetaJson | null>;
 export declare function writeMetaJson(claudeSyncDir: string, meta: MetaJson): Promise<void>;
-export declare function updateLastSync(claudeSyncDir: string): Promise<void>;
+export declare function removeLegacyLastSync(claudeSyncDir: string): Promise<boolean>;
 //# sourceMappingURL=sync.d.ts.map

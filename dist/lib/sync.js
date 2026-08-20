@@ -326,7 +326,6 @@ export function createMetaJson(claudeConfigPath) {
     return {
         version: '1.1.0',
         managedBy: 'claude-sync',
-        lastSync: null,
         machineId: `${hostname}-${machineId}`,
         platform,
         claudeConfigPath,
@@ -352,11 +351,22 @@ export async function writeMetaJson(claudeSyncDir, meta) {
     const portableMeta = { ...meta, claudeConfigPath: contractPath(meta.claudeConfigPath) };
     await fs.writeJson(metaPath, portableMeta, { spaces: 2 });
 }
-export async function updateLastSync(claudeSyncDir) {
-    const meta = await readMetaJson(claudeSyncDir);
-    if (meta) {
-        meta.lastSync = new Date().toISOString();
-        await writeMetaJson(claudeSyncDir, meta);
+export async function removeLegacyLastSync(claudeSyncDir) {
+    const metaPath = path.join(claudeSyncDir, 'meta.json');
+    if (!fs.existsSync(metaPath)) {
+        return false;
+    }
+    try {
+        const meta = await fs.readJson(metaPath);
+        if (!Object.prototype.hasOwnProperty.call(meta, 'lastSync')) {
+            return false;
+        }
+        delete meta.lastSync;
+        await fs.writeJson(metaPath, meta, { spaces: 2 });
+        return true;
+    }
+    catch {
+        return false;
     }
 }
 //# sourceMappingURL=sync.js.map

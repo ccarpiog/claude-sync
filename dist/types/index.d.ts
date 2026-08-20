@@ -28,7 +28,6 @@ export interface FileMapping {
 export interface MetaJson {
     version: string;
     managedBy?: string;
-    lastSync: string | null;
     machineId: string;
     platform: string;
     claudeConfigPath: string;
